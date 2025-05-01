@@ -1,0 +1,4 @@
+- refactor hifigan initializing (ckpt path, config path)
+- refactor batch data passing
+- refactor path parameter passing
+- preprocessor's output does not match the new dataset file structure
