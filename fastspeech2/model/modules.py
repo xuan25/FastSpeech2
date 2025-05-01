@@ -113,6 +113,12 @@ class VarianceAdaptor(nn.Module):
         d_control=1.0,
     ):
 
+        assert self.pitch_feature_level in ["phoneme_level", "frame_level"], "pitch_feature_level should be phoneme_level or frame_level"
+        assert self.energy_feature_level in ["phoneme_level", "frame_level"], "energy_feature_level should be phoneme_level or frame_level"
+
+        pitch_prediction = None
+        energy_prediction = None
+            
         log_duration_prediction = self.duration_predictor(x, src_mask)
         if self.pitch_feature_level == "phoneme_level":
             pitch_prediction, pitch_embedding = self.get_pitch_embedding(
