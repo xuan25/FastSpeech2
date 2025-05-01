@@ -55,6 +55,49 @@ def to_device(data, device):
             energies,
             durations,
         )
+    
+    if len(data) == 13:
+        (
+            ids,
+            raw_texts,
+            speakers,
+            texts,
+            src_lens,
+            max_src_len,
+            sentiments,
+            mels,
+            mel_lens,
+            max_mel_len,
+            pitches,
+            energies,
+            durations,
+        ) = data
+
+        speakers = torch.from_numpy(speakers).long().to(device)
+        texts = torch.from_numpy(texts).long().to(device)
+        src_lens = torch.from_numpy(src_lens).to(device)
+        sentiments = torch.from_numpy(sentiments).long().to(device) if sentiments is not None else None
+        mels = torch.from_numpy(mels).float().to(device)
+        mel_lens = torch.from_numpy(mel_lens).to(device)
+        pitches = torch.from_numpy(pitches).float().to(device)
+        energies = torch.from_numpy(energies).to(device)
+        durations = torch.from_numpy(durations).long().to(device)
+
+        return (
+            ids,
+            raw_texts,
+            speakers,
+            texts,
+            src_lens,
+            max_src_len,
+            sentiments,
+            mels,
+            mel_lens,
+            max_mel_len,
+            pitches,
+            energies,
+            durations,
+        )
 
     if len(data) == 6:
         (ids, raw_texts, speakers, texts, src_lens, max_src_len) = data
@@ -64,6 +107,16 @@ def to_device(data, device):
         src_lens = torch.from_numpy(src_lens).to(device)
 
         return (ids, raw_texts, speakers, texts, src_lens, max_src_len)
+    
+    if len(data) == 7:
+        (ids, raw_texts, speakers, texts, src_lens, max_src_len, sentiments) = data
+
+        speakers = torch.from_numpy(speakers).long().to(device)
+        texts = torch.from_numpy(texts).long().to(device)
+        src_lens = torch.from_numpy(src_lens).to(device)
+        sentiments = torch.from_numpy(sentiments).long().to(device) if sentiments is not None else None
+
+        return (ids, raw_texts, speakers, texts, src_lens, max_src_len, sentiments)
 
 
 def log(
@@ -111,19 +164,19 @@ def synth_one_sample(targets, predictions, vocoder, model_config, preprocess_con
     basename = targets[0][0]
     src_len = predictions[8][0].item()
     mel_len = predictions[9][0].item()
-    mel_target = targets[6][0, :mel_len].detach().transpose(0, 1)
+    mel_target = targets[7][0, :mel_len].detach().transpose(0, 1)
     mel_prediction = predictions[1][0, :mel_len].detach().transpose(0, 1)
-    duration = targets[11][0, :src_len].detach().cpu().numpy()
+    duration = targets[12][0, :src_len].detach().cpu().numpy()
     if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":
-        pitch = targets[9][0, :src_len].detach().cpu().numpy()
+        pitch = targets[10][0, :src_len].detach().cpu().numpy()
         pitch = expand(pitch, duration)
     else:
-        pitch = targets[9][0, :mel_len].detach().cpu().numpy()
+        pitch = targets[10][0, :mel_len].detach().cpu().numpy()
     if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":
-        energy = targets[10][0, :src_len].detach().cpu().numpy()
+        energy = targets[11][0, :src_len].detach().cpu().numpy()
         energy = expand(energy, duration)
     else:
-        energy = targets[10][0, :mel_len].detach().cpu().numpy()
+        energy = targets[11][0, :mel_len].detach().cpu().numpy()
 
     with open(
         os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
