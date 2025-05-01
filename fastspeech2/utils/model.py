@@ -52,17 +52,22 @@ def get_vocoder(config, device):
             vocoder = torch.hub.load(
                 "descriptinc/melgan-neurips", "load_melgan", "multi_speaker"
             )
+        else:
+            raise ValueError("Unknown MelGAN speaker: {}".format(speaker))
         vocoder.mel2wav.eval()
         vocoder.mel2wav.to(device)
     elif name == "HiFi-GAN":
-        with open("hifigan/config.json", "r") as f:
+        hifigan_dir = os.path.dirname(hifigan.__file__)
+        with open(os.path.join(hifigan_dir, "config", "config.json"), "r") as f:
             config = json.load(f)
         config = hifigan.AttrDict(config)
         vocoder = hifigan.Generator(config)
         if speaker == "LJSpeech":
-            ckpt = torch.load("hifigan/generator_LJSpeech.pth.tar")
+            ckpt = torch.load(os.path.join(hifigan_dir, "ckpt", "generator_LJSpeech.pth.tar"))
         elif speaker == "universal":
-            ckpt = torch.load("hifigan/generator_universal.pth.tar")
+            ckpt = torch.load(os.path.join(hifigan_dir, "ckpt", "generator_universal.pth.tar"))
+        else:
+            raise ValueError("Unknown HIFIGAN speaker: {}".format(speaker))
         vocoder.load_state_dict(ckpt["generator"])
         vocoder.eval()
         vocoder.remove_weight_norm()
@@ -78,6 +83,8 @@ def vocoder_infer(mels, vocoder, model_config, preprocess_config, lengths=None):
             wavs = vocoder.inverse(mels / np.log(10))
         elif name == "HiFi-GAN":
             wavs = vocoder(mels).squeeze(1)
+        else:
+            raise ValueError("Unknown vocoder: {}".format(name))
 
     wavs = (
         wavs.cpu().numpy()
