@@ -1,8 +1,9 @@
 import torch
 import numpy as np
+from torch.optim import Optimizer
 
 
-class ScheduledOptim:
+class ScheduledOptim(Optimizer):
     """ A simple wrapper class for learning rate scheduling """
 
     def __init__(self, model, train_config, model_config, current_step):
@@ -49,3 +50,25 @@ class ScheduledOptim:
 
         for param_group in self._optimizer.param_groups:
             param_group["lr"] = lr
+
+if __name__ == "__main__":
+    optim = ScheduledOptim(
+        torch.nn.Linear(10, 1),
+        train_config={
+            "optimizer" : {
+                "betas": [0.9, 0.98],
+                "eps": 0.000000001,
+                "weight_decay": 0.0,
+                "warm_up_step": 4000,
+                "anneal_steps": [300000, 400000, 500000],
+                "anneal_rate": 0.3,
+            }
+        },
+        model_config = {
+            "transformer": {
+                "encoder_hidden": 256,
+            }
+        }, 
+        current_step=0)
+    a = optim.state_dict()
+    print(a)
