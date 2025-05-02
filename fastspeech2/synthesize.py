@@ -1,3 +1,4 @@
+import os
 import re
 import argparse
 from string import punctuation
@@ -104,6 +105,7 @@ def synthesize(model, step, configs, vocoder, batchs, control_values):
                 vocoder,
                 model_config,
                 preprocess_config,
+                os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json"),
                 train_config["path"]["result_path"],
             )
 

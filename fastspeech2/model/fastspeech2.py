@@ -5,10 +5,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+from ..dataset.data_models import DataBatch
 from ..transformer import Encoder, Decoder, PostNet
 from .modules import VarianceAdaptor
 from ..utils.tools import get_mask_from_lengths
-
+from .data_models import FastSpeech2Output
 
 class FastSpeech2(nn.Module):
     """ FastSpeech2 """
@@ -42,50 +44,41 @@ class FastSpeech2(nn.Module):
 
     def forward(
         self,
-        speakers,
-        texts,
-        src_lens,
-        max_src_len,
-        mels=None,
-        mel_lens=None,
-        max_mel_len=None,
-        p_targets=None,
-        e_targets=None,
-        d_targets=None,
-        p_control=1.0,
-        e_control=1.0,
-        d_control=1.0,
+        batch: DataBatch,
+        p_control: float = 1.0,
+        e_control: float = 1.0,
+        d_control: float = 1.0,
     ):
-        src_masks = get_mask_from_lengths(src_lens, max_src_len)
+        text_masks = get_mask_from_lengths(batch.text_lens, batch.text_len_max)
         mel_masks = (
-            get_mask_from_lengths(mel_lens, max_mel_len)
-            if mel_lens is not None
+            get_mask_from_lengths(batch.mel_lens, batch.mel_len_max)
+            if batch.mel_lens is not None
             else None
         )
 
-        output = self.encoder(texts, src_masks)
+        output = self.encoder(batch.texts, text_masks)
 
         if self.speaker_emb is not None:
-            output = output + self.speaker_emb(speakers).unsqueeze(1).expand(
-                -1, max_src_len, -1
+            output = output + self.speaker_emb(batch.speakers).unsqueeze(1).expand(
+                -1, batch.text_len_max, -1
             )
 
         (
             output,
-            p_predictions,
-            e_predictions,
-            log_d_predictions,
-            d_rounded,
+            pitch_predictions,
+            energy_predictions,
+            log_duration_predictions,
+            duration_rounded,
             mel_lens,
             mel_masks,
         ) = self.variance_adaptor(
             output,
-            src_masks,
+            text_masks,
             mel_masks,
-            max_mel_len,
-            p_targets,
-            e_targets,
-            d_targets,
+            batch.mel_len_max,
+            batch.pitches,
+            batch.energies,
+            batch.durations,
             p_control,
             e_control,
             d_control,
@@ -96,15 +89,17 @@ class FastSpeech2(nn.Module):
 
         postnet_output = self.postnet(output) + output
 
-        return (
-            output,
-            postnet_output,
-            p_predictions,
-            e_predictions,
-            log_d_predictions,
-            d_rounded,
-            src_masks,
-            mel_masks,
-            src_lens,
-            mel_lens,
+        output = FastSpeech2Output(
+            output=output,
+            postnet_output=postnet_output,
+            pitch_predictions=pitch_predictions,
+            energy_predictions=energy_predictions,
+            log_duration_predictions=log_duration_predictions,
+            duration_rounded=duration_rounded,
+            text_masks=text_masks,
+            mel_masks=mel_masks,
+            text_lens=batch.text_lens,
+            mel_lens=mel_lens,
         )
+
+        return output

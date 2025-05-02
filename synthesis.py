@@ -37,7 +37,7 @@ def get_model(ckpt_path, configs, device):
     model.requires_grad_ = False
     return model
 
-def synthesize(model, configs, vocoder, batchs, control_values, device, output_dir):
+def synthesize(model, configs, vocoder, batchs, control_values, device, stats_file, output_dir):
     preprocess_config, model_config, train_config = configs
     pitch_control, energy_control, duration_control = control_values
 
@@ -57,6 +57,7 @@ def synthesize(model, configs, vocoder, batchs, control_values, device, output_d
                 vocoder,
                 model_config,
                 preprocess_config,
+                stats_file,
                 output_dir,
             )
 
@@ -161,7 +162,7 @@ def main():
 
     control_values = args.pitch_control, args.energy_control, args.duration_control
 
-    synthesize(model,configs, vocoder, batchs, control_values, device, args.output_dir)
+    synthesize(model,configs, vocoder, batchs, control_values, device, os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json"), args.output_dir)
 
 if __name__ == "__main__":
     main()

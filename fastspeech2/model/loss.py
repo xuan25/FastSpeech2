@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 
-
+from ..dataset.data_models import DataBatch, DataBatchTorch
+from .fastspeech2 import FastSpeech2Output
+from .data_models import FastSpeech2LossResult
 class FastSpeech2Loss(nn.Module):
     """ FastSpeech2 Loss """
 
@@ -16,28 +18,44 @@ class FastSpeech2Loss(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.mae_loss = nn.L1Loss()
 
-    def forward(self, inputs, predictions):
-        (
-            mel_targets,
-            _,
-            _,
-            pitch_targets,
-            energy_targets,
-            duration_targets,
-        ) = inputs[6:]
-        (
-            mel_predictions,
-            postnet_mel_predictions,
-            pitch_predictions,
-            energy_predictions,
-            log_duration_predictions,
-            _,
-            src_masks,
-            mel_masks,
-            _,
-            _,
-        ) = predictions
-        src_masks = ~src_masks
+    def forward(self, inputs: DataBatchTorch, predictions: FastSpeech2Output) -> FastSpeech2LossResult:
+        # (
+        #     mel_targets,
+        #     _,
+        #     _,
+        #     pitch_targets,
+        #     energy_targets,
+        #     duration_targets,
+        # ) = inputs[6:]
+
+        mel_targets = inputs.mels
+        pitch_targets = inputs.pitches
+        energy_targets = inputs.energies
+        duration_targets = inputs.durations
+
+        # (
+        #     mel_predictions,
+        #     postnet_mel_predictions,
+        #     pitch_predictions,
+        #     energy_predictions,
+        #     log_duration_predictions,
+        #     _,
+        #     src_masks,
+        #     mel_masks,
+        #     _,
+        #     _,
+        # ) = predictions
+
+        mel_predictions = predictions.output
+        postnet_mel_predictions = predictions.postnet_output
+        pitch_predictions = predictions.pitch_predictions
+        energy_predictions = predictions.energy_predictions
+        log_duration_predictions = predictions.log_duration_predictions
+        text_masks = predictions.text_masks
+        mel_masks = predictions.mel_masks
+        
+        
+        text_masks = ~text_masks
         mel_masks = ~mel_masks
         log_duration_targets = torch.log(duration_targets.float() + 1)
         mel_targets = mel_targets[:, : mel_masks.shape[1], :]
@@ -49,21 +67,21 @@ class FastSpeech2Loss(nn.Module):
         mel_targets.requires_grad = False
 
         if self.pitch_feature_level == "phoneme_level":
-            pitch_predictions = pitch_predictions.masked_select(src_masks)
-            pitch_targets = pitch_targets.masked_select(src_masks)
+            pitch_predictions = pitch_predictions.masked_select(text_masks)
+            pitch_targets = pitch_targets.masked_select(text_masks)
         elif self.pitch_feature_level == "frame_level":
             pitch_predictions = pitch_predictions.masked_select(mel_masks)
             pitch_targets = pitch_targets.masked_select(mel_masks)
 
         if self.energy_feature_level == "phoneme_level":
-            energy_predictions = energy_predictions.masked_select(src_masks)
-            energy_targets = energy_targets.masked_select(src_masks)
+            energy_predictions = energy_predictions.masked_select(text_masks)
+            energy_targets = energy_targets.masked_select(text_masks)
         if self.energy_feature_level == "frame_level":
             energy_predictions = energy_predictions.masked_select(mel_masks)
             energy_targets = energy_targets.masked_select(mel_masks)
 
-        log_duration_predictions = log_duration_predictions.masked_select(src_masks)
-        log_duration_targets = log_duration_targets.masked_select(src_masks)
+        log_duration_predictions = log_duration_predictions.masked_select(text_masks)
+        log_duration_targets = log_duration_targets.masked_select(text_masks)
 
         mel_predictions = mel_predictions.masked_select(mel_masks.unsqueeze(-1))
         postnet_mel_predictions = postnet_mel_predictions.masked_select(
@@ -82,11 +100,13 @@ class FastSpeech2Loss(nn.Module):
             mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss
         )
 
-        return (
-            total_loss,
-            mel_loss,
-            postnet_mel_loss,
-            pitch_loss,
-            energy_loss,
-            duration_loss,
+        result = FastSpeech2LossResult(
+            total_loss=total_loss,
+            mel_loss=mel_loss,
+            postnet_mel_loss=postnet_mel_loss,
+            pitch_loss=pitch_loss,
+            energy_loss=energy_loss,
+            duration_loss=duration_loss,
         )
+
+        return result

@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import tqdm
 
-from fastspeech2.dataset.data_model import DataBatch, DataSample
+from fastspeech2.dataset.data_models import DataBatch, DataSample
 from fastspeech2.text import text_to_sequence
 
 def load_sentiment(file):

@@ -6,11 +6,13 @@ import yaml
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch
+from fastspeech2.model.fastspeech2 import FastSpeech2Output
 from fastspeech2.utils.model import get_model, get_vocoder
-from fastspeech2.utils.tools import to_device, log, synth_one_sample
+from fastspeech2.utils.tools import log, synth_one_sample
 from fastspeech2.model import FastSpeech2Loss
 # from dataset import Dataset
-from dataset import OriginalDataset, OriginalDatasetWithSentiment
+from dataset import OriginalDatasetWithSentiment
 
 
 
@@ -21,8 +23,11 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
     preprocess_config, model_config, train_config = configs
 
     # Get dataset
-    dataset = OriginalDataset(
-        "val.txt", preprocess_config, train_config, sort=False, drop_last=False
+    dataset = OriginalDatasetWithSentiment(
+        meta_file="data/augmented_data/LibriTTS-original/val.txt",
+        speaker_map_file="data/augmented_data/LibriTTS-original/speakers.json",
+        feature_dir="data/augmented_data/LibriTTS-original",
+        sentiment_file="data/original/LibriTTS/sentiment_scores_libri-tts.csv",
     )
     # dataset = SentimentBalancedDataset(
     #     meta_file="preprocessed_data/LibriTTS/val.txt",
@@ -45,18 +50,18 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
 
     # Evaluation
     loss_sums = [0 for _ in range(6)]
-    for batchs in loader:
-        for batch in batchs:
-            batch = to_device(batch, device)
-            with torch.no_grad():
-                # Forward
-                output = model(*(batch[2:]))
+    for batch in loader:
+        batch: DataBatch = batch
+        batch_torch: DataBatchTorch = batch.to_torch(device)
+        with torch.no_grad():
+            # Forward
+            output: FastSpeech2Output = model(batch_torch)
 
-                # Cal Loss
-                losses = Loss(batch, output)
+            # Cal Loss
+            losses = Loss(batch_torch, output)
 
-                for i in range(len(losses)):
-                    loss_sums[i] += losses[i].item() * len(batch[0])
+            for i in range(len(losses)):
+                loss_sums[i] += losses[i].item() * len(batch_torch.batch_size)
 
     loss_means = [loss_sum / len(dataset) for loss_sum in loss_sums]
 
@@ -66,7 +71,7 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
 
     if logger is not None:
         fig, wav_reconstruction, wav_prediction, tag = synth_one_sample(
-            batch,
+            batch_torch,
             output,
             vocoder,
             model_config,

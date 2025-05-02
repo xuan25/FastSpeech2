@@ -9,10 +9,31 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 
-from ..utils.tools import get_mask_from_lengths, pad
+from ..utils.tools import get_mask_from_lengths
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def pad(input_ele, mel_max_length=None):
+    if mel_max_length:
+        max_len = mel_max_length
+    else:
+        max_len = max([input_ele[i].size(0) for i in range(len(input_ele))])
+
+    out_list = list()
+    for i, batch in enumerate(input_ele):
+        if len(batch.shape) == 1:
+            one_batch_padded = F.pad(
+                batch, (0, max_len - batch.size(0)), "constant", 0.0
+            )
+        elif len(batch.shape) == 2:
+            one_batch_padded = F.pad(
+                batch, (0, 0, 0, max_len - batch.size(0)), "constant", 0.0
+            )
+        else:
+            raise ValueError("input should be 1D or 2D tensor")
+        out_list.append(one_batch_padded)
+    out_padded = torch.stack(out_list)
+    return out_padded
 
 class VarianceAdaptor(nn.Module):
     """Variance Adaptor"""

@@ -100,13 +100,51 @@ class DataBatch:
 
     def to_torch(self, device):
         
-        self.speakers = torch.from_numpy(self.speakers).long().to(device)
-        self.texts = torch.from_numpy(self.texts).long().to(device)
-        self.text_lens = torch.from_numpy(self.text_lens).to(device)
-        self.mels = torch.from_numpy(self.mels).float().to(device) if self.mels is not None else None
-        self.mel_lens = torch.from_numpy(self.mel_lens).to(device) if self.mel_lens is not None else None
-        self.pitches = torch.from_numpy(self.pitches).float().to(device) if self.pitches is not None else None
-        self.energies = torch.from_numpy(self.energies).to(device) if self.energies is not None else None
-        self.durations = torch.from_numpy(self.durations).long().to(device) if self.durations is not None else None
-        
-        return self
+        # self.speakers = torch.from_numpy(self.speakers).long().to(device)
+        # self.texts = torch.from_numpy(self.texts).long().to(device)
+        # self.text_lens = torch.from_numpy(self.text_lens).to(device)
+        # self.mels = torch.from_numpy(self.mels).float().to(device) if self.mels is not None else None
+        # self.mel_lens = torch.from_numpy(self.mel_lens).to(device) if self.mel_lens is not None else None
+        # self.pitches = torch.from_numpy(self.pitches).float().to(device) if self.pitches is not None else None
+        # self.energies = torch.from_numpy(self.energies).to(device) if self.energies is not None else None
+        # self.durations = torch.from_numpy(self.durations).long().to(device) if self.durations is not None else None
+
+        result = DataBatchTorch(self, device)
+
+        return result
+    
+class DataBatchTorch:
+    def __init__(self, data_batch: DataBatch, device: str|torch.device = "cpu"):
+
+        self.data_samples = data_batch.data_samples
+        self.sort = data_batch.sort
+        self.batch_size = data_batch.batch_size
+
+        self.data_ids = data_batch.data_ids
+        self.speakers = torch.from_numpy(data_batch.speakers).long().to(device)
+        self.texts = torch.from_numpy(data_batch.texts).long().to(device)
+        self.raw_texts = data_batch.raw_texts
+        self.mels = torch.from_numpy(data_batch.mels).float().to(device) if data_batch.mels is not None else None
+        self.pitches = torch.from_numpy(data_batch.pitches).float().to(device) if data_batch.pitches is not None else None
+        self.energies = torch.from_numpy(data_batch.energies).to(device) if data_batch.energies is not None else None
+        self.durations = torch.from_numpy(data_batch.durations).long().to(device) if data_batch.durations is not None else None
+        self.sentiments = torch.from_numpy(data_batch.sentiments).long().to(device) if data_batch.sentiments is not None else None
+        self.text_lens = torch.from_numpy(data_batch.text_lens).to(device)
+        self.mel_lens = torch.from_numpy(data_batch.mel_lens).to(device) if data_batch.mel_lens is not None else None
+        self.text_len_max = data_batch.text_len_max
+        self.mel_len_max = data_batch.mel_len_max
+    
+    def __repr__(self):
+        return f"DataBatchTorch(data_ids={self.data_ids}, speakers={self.speakers}, texts={self.texts}, raw_texts={self.raw_texts}, mels={self.mels}, pitches={self.pitches}, energies={self.energies}, durations={self.durations})"
+    
+    def __len__(self):
+        return self.batch_size
+    
+    def __getitem__(self, idx):
+        if idx >= self.batch_size:
+            raise IndexError("Index out of range")
+        return self.data_samples[idx]
+    
+    def __iter__(self):
+        for sample in self.data_samples:
+            yield sample
