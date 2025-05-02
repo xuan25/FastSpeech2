@@ -109,7 +109,7 @@ def expand(values, durations):
     return np.array(out)
 
 
-def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, model_config, preprocess_config):
+def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, model_config, stats_file, preprocess_config):
 
     basename = targets.data_ids[0]
     src_len = predictions.text_lens[0].item()
@@ -117,22 +117,22 @@ def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vo
     mel_target = targets.mels[0, :mel_len].detach().transpose(0, 1)
     mel_prediction = predictions.postnet_output[0, :mel_len].detach().transpose(0, 1)
     duration = targets.durations[0, :src_len].detach().cpu().numpy()
-    if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":
+    if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":       # TODO: need to be refactored
         pitch = targets.pitches[0, :src_len].detach().cpu().numpy()
         pitch = expand(pitch, duration)
     else:
         pitch = targets.pitches[0, :mel_len].detach().cpu().numpy()
-    if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":
+    if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":      # TODO: need to be refactored
         energy = targets.energies[0, :src_len].detach().cpu().numpy()
         energy = expand(energy, duration)
     else:
         energy = targets.energies[0, :mel_len].detach().cpu().numpy()
 
     with open(
-        os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
+        stats_file
     ) as f:
         stats = json.load(f)
-        stats = stats["pitch"] + stats["energy"][:2]
+        stats = stats["pitch"] + stats["energy"][:2]    # TODO: need to be refactored
 
     fig = plot_mel(
         [
@@ -173,12 +173,12 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
         mel_len = predictions.mel_lens[i].item()
         mel_prediction = predictions.postnet_output[i, :mel_len].detach().transpose(0, 1)
         duration = predictions.duration_rounded[i, :src_len].detach().cpu().numpy()
-        if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":
+        if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":       # TODO: need to be refactored
             pitch = predictions.pitch_predictions[i, :src_len].detach().cpu().numpy()
             pitch = expand(pitch, duration)
         else:
             pitch = predictions.pitch_predictions[i, :mel_len].detach().cpu().numpy()
-        if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":
+        if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":      # TODO: need to be refactored
             energy = predictions.energy_predictions[i, :src_len].detach().cpu().numpy()
             energy = expand(energy, duration)
         else:
@@ -203,12 +203,12 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
     from .model import vocoder_infer
 
     mel_predictions = predictions.postnet_output.transpose(1, 2)
-    lengths = predictions.mel_lens * preprocess_config["preprocessing"]["stft"]["hop_length"]
+    lengths = predictions.mel_lens * preprocess_config["preprocessing"]["stft"]["hop_length"]       # TODO: need to be refactored
     wav_predictions = vocoder_infer(
         mel_predictions, vocoder, model_config, preprocess_config, lengths=lengths
     )
 
-    sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
+    sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]        # TODO: need to be refactored
     for wav, basename in zip(wav_predictions, basenames):
         wavfile.write(os.path.join(out_path, "{}.wav".format(basename)), sampling_rate, wav)
 

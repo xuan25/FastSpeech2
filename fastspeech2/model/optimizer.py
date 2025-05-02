@@ -8,6 +8,7 @@ class ScheduledOptim(Optimizer):
 
     def __init__(self, model, train_config, model_config, current_step):
 
+        # TODO: need to be refactored
         self._optimizer = torch.optim.Adam(
             model.parameters(),
             betas=train_config["optimizer"]["betas"],

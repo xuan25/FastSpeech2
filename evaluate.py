@@ -20,7 +20,7 @@ from dataset import OriginalDatasetWithSentiment
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def evaluate(model, step, configs, logger=None, vocoder=None):
+def evaluate(model, step, configs, stats_file, logger=None, vocoder=None):
     preprocess_config, model_config, train_config = configs
 
     # Get dataset
@@ -105,6 +105,7 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
             output,
             vocoder,
             model_config,
+            stats_file,
             preprocess_config,
         )
 
@@ -161,5 +162,6 @@ if __name__ == "__main__":
     # Get model
     model = get_model(args, configs, device, train=False).to(device)
 
-    message = evaluate(model, args.restore_step, configs)
+    stats_file = os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json") # TODO: do not hardcode this
+    message = evaluate(model, args.restore_step, configs, stats_file)
     print(message)

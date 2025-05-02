@@ -36,6 +36,7 @@ class Encoder(nn.Module):
     def __init__(self, config):
         super(Encoder, self).__init__()
 
+        # TODO: need to be refactored
         n_position = config["max_seq_len"] + 1
         n_src_vocab = len(symbols) + 1
         d_word_vec = config["transformer"]["encoder_hidden"]
@@ -106,6 +107,7 @@ class Decoder(nn.Module):
     def __init__(self, config):
         super(Decoder, self).__init__()
 
+        # TODO: need to be refactored
         n_position = config["max_seq_len"] + 1
         d_word_vec = config["transformer"]["decoder_hidden"]
         n_layers = config["transformer"]["decoder_layer"]

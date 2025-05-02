@@ -14,7 +14,7 @@ def get_model(args, configs, device, train=False) -> FastSpeech2:
     model = FastSpeech2(preprocess_config, model_config).to(device)
     if args.restore_step:
         ckpt_path = os.path.join(
-            train_config["path"]["ckpt_path"],
+            train_config["path"]["ckpt_path"],              # TODO: need to be refactored
             "{}.pth.tar".format(args.restore_step),
         )
         ckpt = torch.load(ckpt_path)
@@ -40,8 +40,8 @@ def get_param_num(model):
 
 
 def get_vocoder(config, device):
-    name = config["vocoder"]["model"]
-    speaker = config["vocoder"]["speaker"]
+    name = config["vocoder"]["model"]           # TODO: need to be refactored
+    speaker = config["vocoder"]["speaker"]      # TODO: need to be refactored
 
     if name == "MelGAN":
         if speaker == "LJSpeech":
@@ -77,7 +77,7 @@ def get_vocoder(config, device):
 
 
 def vocoder_infer(mels, vocoder, model_config, preprocess_config, lengths=None):
-    name = model_config["vocoder"]["model"]
+    name = model_config["vocoder"]["model"]                         # TODO: need to be refactored
     with torch.no_grad():
         if name == "MelGAN":
             wavs = vocoder.inverse(mels / np.log(10))
@@ -88,7 +88,7 @@ def vocoder_infer(mels, vocoder, model_config, preprocess_config, lengths=None):
 
     wavs = (
         wavs.cpu().numpy()
-        * preprocess_config["preprocessing"]["audio"]["max_wav_value"]
+        * preprocess_config["preprocessing"]["audio"]["max_wav_value"]          # TODO: need to be refactored
     ).astype("int16")
     wavs = [wav for wav in wavs]
 

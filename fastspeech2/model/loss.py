@@ -9,6 +9,8 @@ class FastSpeech2Loss(nn.Module):
 
     def __init__(self, preprocess_config, model_config):
         super(FastSpeech2Loss, self).__init__()
+        
+        # TODO: need to be refactored
         self.pitch_feature_level = preprocess_config["preprocessing"]["pitch"][
             "feature"
         ]

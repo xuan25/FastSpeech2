@@ -161,7 +161,10 @@ def main(args, configs):
 
             if step % val_step == 0:
                 model.eval()
-                message = evaluate(model, step, configs, val_logger, vocoder)
+                stats_file = os.path.join(
+                    preprocess_config["path"]["preprocessed_path"], "stats.json"
+                )       # TODO: do not hardcode this
+                message = evaluate(model, step, configs, stats_file, val_logger, vocoder)
                 with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                     f.write(message + "\n")
                 total_step_bar.write(message)

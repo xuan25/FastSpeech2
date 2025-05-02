@@ -45,6 +45,7 @@ class VarianceAdaptor(nn.Module):
         self.pitch_predictor = VariancePredictor(model_config)
         self.energy_predictor = VariancePredictor(model_config)
 
+        # TODO: need to be refactored
         self.pitch_feature_level = preprocess_config["preprocessing"]["pitch"][
             "feature"
         ]
@@ -62,6 +63,7 @@ class VarianceAdaptor(nn.Module):
         with open(
             os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
         ) as f:
+            # TODO: need to be refactored
             stats = json.load(f)
             pitch_min, pitch_max = stats["pitch"][:2]
             energy_min, energy_max = stats["energy"][:2]
@@ -227,6 +229,7 @@ class VariancePredictor(nn.Module):
     def __init__(self, model_config):
         super(VariancePredictor, self).__init__()
 
+        # TODO: need to be refactored
         self.input_size = model_config["transformer"]["encoder_hidden"]
         self.filter_size = model_config["variance_predictor"]["filter_size"]
         self.kernel = model_config["variance_predictor"]["kernel_size"]
