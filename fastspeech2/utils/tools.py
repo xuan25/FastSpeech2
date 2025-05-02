@@ -164,11 +164,16 @@ def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vo
     return fig, wav_reconstruction, wav_prediction, basename
 
 
-def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, model_config, preprocess_config, stats_file, out_path):
+def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, model_config, preprocess_config, stats_file, output_dir):
 
-    basenames = targets.data_ids
-    for i in range(len(predictions[0])):
-        basename = basenames[i]
+    with open(
+        stats_file
+    ) as f:
+        stats = json.load(f)
+        stats = stats["pitch"] + stats["energy"][:2]
+
+    for i in range(targets.batch_size):
+        basename = targets.data_ids[i]
         src_len = predictions.text_lens[i].item()
         mel_len = predictions.mel_lens[i].item()
         mel_prediction = predictions.postnet_output[i, :mel_len].detach().transpose(0, 1)
@@ -184,12 +189,6 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
         else:
             energy = predictions.energy_predictions[i, :mel_len].detach().cpu().numpy()
 
-        with open(
-            stats_file
-        ) as f:
-            stats = json.load(f)
-            stats = stats["pitch"] + stats["energy"][:2]
-
         fig = plot_mel(
             [
                 (mel_prediction.cpu().numpy(), pitch, energy),
@@ -197,7 +196,7 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
             stats,
             ["Synthetized Spectrogram"],
         )
-        plt.savefig(os.path.join(out_path, "{}.png".format(basename)))
+        plt.savefig(os.path.join(output_dir, "{}.png".format(basename)))
         plt.close()
 
     from .model import vocoder_infer
@@ -209,8 +208,8 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
     )
 
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]        # TODO: need to be refactored
-    for wav, basename in zip(wav_predictions, basenames):
-        wavfile.write(os.path.join(out_path, "{}.wav".format(basename)), sampling_rate, wav)
+    for wav, basename in zip(wav_predictions, targets.data_ids):
+        wavfile.write(os.path.join(output_dir, "{}.wav".format(basename)), sampling_rate, wav)
 
 
 def plot_mel(data, stats, titles):

@@ -131,11 +131,15 @@ def main(args, configs):
                 log(train_logger, step, losses=losses)
 
             if step % synth_step == 0:
+                stats_file = os.path.join(
+                    preprocess_config["path"]["preprocessed_path"], "stats.json"
+                )
                 fig, wav_reconstruction, wav_prediction, tag = synth_one_sample(
                     batch_torch,
                     output,
                     vocoder,
                     model_config,
+                    stats_file,
                     preprocess_config,
                 )
                 log(

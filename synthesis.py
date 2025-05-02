@@ -11,18 +11,18 @@ import yaml
 
 import re
 
+from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch
 from fastspeech2.model import FastSpeech2
 from fastspeech2.model.optimizer import ScheduledOptim
 from fastspeech2.text import text_to_sequence
 from g2p_en import G2p
 
 from fastspeech2.utils.model import get_vocoder
-from fastspeech2.utils.tools import pad_1D
 
 from torch.utils.data import DataLoader
 
-from fastspeech2.utils.tools import to_device, synth_samples
-from dataset import TextOnlyDataset, TextOnlyDatasetWithSentiment
+from fastspeech2.utils.tools import synth_samples
+from dataset import TextOnlyDatasetWithSentiment
 
 
 def get_model(ckpt_path, configs, device):
@@ -42,11 +42,12 @@ def synthesize(model, configs, vocoder, batchs, control_values, device, stats_fi
     pitch_control, energy_control, duration_control = control_values
 
     for batch in tqdm.tqdm(batchs, desc="[Decoding]", dynamic_ncols=True):
-        batch = to_device(batch, device)
+        batch: DataBatch = batch
+        batch_torch: DataBatchTorch = batch.to_torch(device)
         with torch.no_grad():
             # Forward
             output = model(
-                *(batch[2:]),
+                batch_torch,
                 p_control=pitch_control,
                 e_control=energy_control,
                 d_control=duration_control
@@ -68,7 +69,8 @@ def main():
         "--ckpt_path", 
         type=str, 
         # default="output_archive/onehot_encoder/ckpt/LibriTTS/30000.pth.tar"
-        default="output_archive/original/ckpt/LibriTTS/30000.pth.tar"
+        # default="output_archive/original/ckpt/LibriTTS/30000.pth.tar"
+        default="output/ckpt/LibriTTS/4000.pth.tar"
     )
     parser.add_argument(
         "--meta_file",
@@ -80,7 +82,8 @@ def main():
         "--output_dir",
         type=str,
         # default="synth_output_val/onehot_encoder",
-        default="synth_output_val/original",
+        # default="synth_output_val/original",
+        default="output/synth_val",
         help="path to a source file with format like LibriTTS dataset",
     )
     parser.add_argument(
@@ -150,9 +153,11 @@ def main():
 
     # Get dataset
     dataset = TextOnlyDatasetWithSentiment(
-        args.meta_file,
+        meta_file=args.meta_file,
         speaker_map_file=args.speaker_config,
-        text_cleaners=["english_cleaners"])
+        sentiment_file="data/original/LibriTTS/sentiment_scores_libri-tts.csv"
+        )
+
     batchs = DataLoader(
         dataset,
         batch_size=32,
@@ -162,7 +167,13 @@ def main():
 
     control_values = args.pitch_control, args.energy_control, args.duration_control
 
-    synthesize(model,configs, vocoder, batchs, control_values, device, os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json"), args.output_dir)
+    stats_file = os.path.join(
+        preprocess_config["path"]["preprocessed_path"], "stats.json"
+    )   # TODO: do not hardcode this
+
+    output_dir: str = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
+    synthesize(model,configs, vocoder, batchs, control_values, device, stats_file, output_dir)
 
 if __name__ == "__main__":
     main()
