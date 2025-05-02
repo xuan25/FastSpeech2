@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch
+from fastspeech2.model.data_models import FastSpeech2LossResult
 from fastspeech2.model.fastspeech2 import FastSpeech2Output
 from fastspeech2.utils.model import get_model, get_vocoder
 from fastspeech2.utils.tools import log, synth_one_sample
@@ -49,7 +50,16 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
     Loss = FastSpeech2Loss(preprocess_config, model_config).to(device)
 
     # Evaluation
-    loss_sums = [0 for _ in range(6)]
+
+    loss_sums = FastSpeech2LossResult(
+        total_loss=torch.tensor(0.0),
+        mel_loss=torch.tensor(0.0),
+        postnet_mel_loss=torch.tensor(0.0),
+        pitch_loss=torch.tensor(0.0),
+        energy_loss=torch.tensor(0.0),
+        duration_loss=torch.tensor(0.0),
+    )
+    
     for batch in loader:
         batch: DataBatch = batch
         batch_torch: DataBatchTorch = batch.to_torch(device)
@@ -58,15 +68,35 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
             output: FastSpeech2Output = model(batch_torch)
 
             # Cal Loss
-            losses = Loss(batch_torch, output)
+            losses: FastSpeech2LossResult = Loss(batch_torch, output)
 
-            for i in range(len(losses)):
-                loss_sums[i] += losses[i].item() * len(batch_torch.batch_size)
+            loss_sums.total_loss += losses.total_loss.item() * batch_torch.batch_size
+            loss_sums.mel_loss += losses.mel_loss.item() * batch_torch.batch_size
+            loss_sums.postnet_mel_loss += losses.postnet_mel_loss.item() * batch_torch.batch_size
+            loss_sums.pitch_loss += losses.pitch_loss.item() * batch_torch.batch_size
+            loss_sums.energy_loss += losses.energy_loss.item() * batch_torch.batch_size
+            loss_sums.duration_loss += losses.duration_loss.item() * batch_torch.batch_size
 
-    loss_means = [loss_sum / len(dataset) for loss_sum in loss_sums]
 
-    message = "Validation Step {}, Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}".format(
-        *([step] + [l for l in loss_means])
+    loss_means = FastSpeech2LossResult(
+        total_loss=loss_sums.total_loss / len(dataset),
+        mel_loss=loss_sums.mel_loss / len(dataset),
+        postnet_mel_loss=loss_sums.postnet_mel_loss / len(dataset),
+        pitch_loss=loss_sums.pitch_loss / len(dataset),
+        energy_loss=loss_sums.energy_loss / len(dataset),
+        duration_loss=loss_sums.duration_loss / len(dataset),
+    )
+
+    message = (
+        "Validation Step {}, Total Loss: {:.4f}, Mel Loss: {:.4f}, Mel PostNet Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}".format(
+            step,
+            loss_means.total_loss.item(),
+            loss_means.mel_loss.item(),
+            loss_means.postnet_mel_loss.item(),
+            loss_means.pitch_loss.item(),
+            loss_means.energy_loss.item(),
+            loss_means.duration_loss.item(),
+        )
     )
 
     if logger is not None:
