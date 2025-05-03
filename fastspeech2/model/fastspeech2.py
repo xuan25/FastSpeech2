@@ -5,8 +5,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..config import DatasetFeaturePropertiesConfig, ModelConfig, ModelGlobalConfig, ModelTransformerConfig
 
-from ..dataset.data_models import DataBatch
+
+from ..dataset.data_models import DataBatch, DatasetFeatureStats
 from ..transformer import Encoder, Decoder, PostNet
 from .modules import VarianceAdaptor
 from ..utils.tools import get_mask_from_lengths
@@ -15,32 +17,34 @@ from .data_models import FastSpeech2Output
 class FastSpeech2(nn.Module):
     """ FastSpeech2 """
 
-    def __init__(self, preprocess_config, model_config):
+    def __init__(self, 
+                 model_config: ModelConfig,
+                 dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
+                 dataset_feature_stats: DatasetFeatureStats,
+        ):
         super(FastSpeech2, self).__init__()
         self.model_config = model_config
 
-        self.encoder = Encoder(model_config)
-        self.variance_adaptor = VarianceAdaptor(preprocess_config, model_config)
-        self.decoder = Decoder(model_config)
-        # TODO: need to be refactored
+        self.encoder = Encoder(model_config.transformer_config, model_config.global_config.max_seq_len)
+        self.variance_adaptor = VarianceAdaptor(
+            model_config.transformer_config.encoder_hidden, 
+            model_config.variance_embedding_config,
+            model_config.variance_predictor_config,
+            dataset_feature_properties_config,
+            dataset_feature_stats)
+        self.decoder = Decoder(model_config.transformer_config, model_config.global_config.max_seq_len)
         self.mel_linear = nn.Linear(
-            model_config["transformer"]["decoder_hidden"],
-            preprocess_config["preprocessing"]["mel"]["n_mel_channels"],
+            model_config.transformer_config.decoder_hidden,
+            dataset_feature_properties_config.n_mel_channels,
         )
         self.postnet = PostNet()
 
         self.speaker_emb = None
-        if model_config["multi_speaker"]:
-            with open(
-                os.path.join(
-                    preprocess_config["path"]["preprocessed_path"], "speakers.json"
-                ),
-                "r",
-            ) as f:
-                n_speaker = len(json.load(f))
+        if model_config.global_config.multi_speaker:
+            n_speaker = dataset_feature_stats.n_speakers
             self.speaker_emb = nn.Embedding(
                 n_speaker,
-                model_config["transformer"]["encoder_hidden"],
+                model_config.transformer_config.encoder_hidden,
             )
 
     def forward(

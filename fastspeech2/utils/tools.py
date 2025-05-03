@@ -8,7 +8,9 @@ import matplotlib
 from scipy.io import wavfile
 from matplotlib import pyplot as plt
 
-from ..dataset.data_models import DataBatchTorch
+from ..config import DatasetFeaturePropertiesConfig, ModelVocoderConfig
+
+from ..dataset.data_models import DataBatchTorch, DatasetFeatureStats
 from ..model.data_models import FastSpeech2Output, FastSpeech2LossResult
 
 
@@ -109,7 +111,7 @@ def expand(values, durations):
     return np.array(out)
 
 
-def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, model_config, stats_file, preprocess_config):
+def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, vocoder_config: ModelVocoderConfig, stats: DatasetFeatureStats, feature_properties_config: DatasetFeaturePropertiesConfig):
 
     basename = targets.data_ids[0]
     src_len = predictions.text_lens[0].item()
@@ -117,22 +119,16 @@ def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vo
     mel_target = targets.mels[0, :mel_len].detach().transpose(0, 1)
     mel_prediction = predictions.postnet_output[0, :mel_len].detach().transpose(0, 1)
     duration = targets.durations[0, :src_len].detach().cpu().numpy()
-    if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":       # TODO: need to be refactored
+    if feature_properties_config.pitch_feature_level == "phoneme_level":       # TODO: need to be refactored
         pitch = targets.pitches[0, :src_len].detach().cpu().numpy()
         pitch = expand(pitch, duration)
     else:
         pitch = targets.pitches[0, :mel_len].detach().cpu().numpy()
-    if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":      # TODO: need to be refactored
+    if feature_properties_config.energy_feature_level == "phoneme_level":      # TODO: need to be refactored
         energy = targets.energies[0, :src_len].detach().cpu().numpy()
         energy = expand(energy, duration)
     else:
         energy = targets.energies[0, :mel_len].detach().cpu().numpy()
-
-    with open(
-        stats_file
-    ) as f:
-        stats = json.load(f)
-        stats = stats["pitch"] + stats["energy"][:2]    # TODO: need to be refactored
 
     fig = plot_mel(
         [
@@ -149,14 +145,14 @@ def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vo
         wav_reconstruction = vocoder_infer(
             mel_target.unsqueeze(0),
             vocoder,
-            model_config,
-            preprocess_config,
+            vocoder_config.model,
+            feature_properties_config.max_wav_value,
         )[0]
         wav_prediction = vocoder_infer(
             mel_prediction.unsqueeze(0),
             vocoder,
-            model_config,
-            preprocess_config,
+            vocoder_config.model,
+            feature_properties_config.max_wav_value,
         )[0]
     else:
         wav_reconstruction = wav_prediction = None
@@ -164,26 +160,19 @@ def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vo
     return fig, wav_reconstruction, wav_prediction, basename
 
 
-def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, model_config, preprocess_config, stats_file, output_dir):
-
-    with open(
-        stats_file
-    ) as f:
-        stats = json.load(f)
-        stats = stats["pitch"] + stats["energy"][:2]
-
+def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, vocoder_config: ModelVocoderConfig, feature_properties_config: DatasetFeaturePropertiesConfig, stats: DatasetFeatureStats, output_dir: str):
     for i in range(targets.batch_size):
         basename = targets.data_ids[i]
         src_len = predictions.text_lens[i].item()
         mel_len = predictions.mel_lens[i].item()
         mel_prediction = predictions.postnet_output[i, :mel_len].detach().transpose(0, 1)
         duration = predictions.duration_rounded[i, :src_len].detach().cpu().numpy()
-        if preprocess_config["preprocessing"]["pitch"]["feature"] == "phoneme_level":       # TODO: need to be refactored
+        if feature_properties_config.pitch_feature_level == "phoneme_level":       # TODO: need to be refactored
             pitch = predictions.pitch_predictions[i, :src_len].detach().cpu().numpy()
             pitch = expand(pitch, duration)
         else:
             pitch = predictions.pitch_predictions[i, :mel_len].detach().cpu().numpy()
-        if preprocess_config["preprocessing"]["energy"]["feature"] == "phoneme_level":      # TODO: need to be refactored
+        if feature_properties_config.energy_feature_level == "phoneme_level":      # TODO: need to be refactored
             energy = predictions.energy_predictions[i, :src_len].detach().cpu().numpy()
             energy = expand(energy, duration)
         else:
@@ -202,21 +191,21 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
     from .model import vocoder_infer
 
     mel_predictions = predictions.postnet_output.transpose(1, 2)
-    lengths = predictions.mel_lens * preprocess_config["preprocessing"]["stft"]["hop_length"]       # TODO: need to be refactored
+    lengths = predictions.mel_lens * feature_properties_config.stft_hop_length
     wav_predictions = vocoder_infer(
-        mel_predictions, vocoder, model_config, preprocess_config, lengths=lengths
+        mel_predictions, vocoder, vocoder_config.model, feature_properties_config.max_wav_value, lengths=lengths
     )
 
-    sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]        # TODO: need to be refactored
+    sampling_rate = feature_properties_config.sampling_rate
     for wav, basename in zip(wav_predictions, targets.data_ids):
         wavfile.write(os.path.join(output_dir, "{}.wav".format(basename)), sampling_rate, wav)
 
 
-def plot_mel(data, stats, titles):
+def plot_mel(data, stats: DatasetFeatureStats, titles):
     fig, axes = plt.subplots(len(data), 1, squeeze=False)
     if titles is None:
         titles = [None for i in range(len(data))]
-    pitch_min, pitch_max, pitch_mean, pitch_std, energy_min, energy_max = stats
+    pitch_min, pitch_max, pitch_mean, pitch_std, energy_min, energy_max = stats.pitch_min, stats.pitch_max, stats.pitch_mean, stats.pitch_std, stats.energy_min, stats.energy_max
     pitch_min = pitch_min * pitch_std + pitch_mean
     pitch_max = pitch_max * pitch_std + pitch_mean
 

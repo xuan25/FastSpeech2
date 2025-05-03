@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 # from fastspeech2.dataset import Dataset
-from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch
+from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from fastspeech2.model.fastspeech2 import FastSpeech2, FastSpeech2Output
 from fastspeech2.model.loss import FastSpeech2LossResult
 from fastspeech2.model.optimizer import ScheduledOptim
@@ -17,7 +17,7 @@ from fastspeech2.utils.model import get_model, get_vocoder, get_param_num
 from fastspeech2.utils.tools import log, synth_one_sample
 from fastspeech2.model import FastSpeech2Loss
 # from fastspeech2.dataset import Dataset
-from dataset import OriginalDatasetWithSentiment
+from dataset import DatasetSplit, OriginalDatasetWithSentiment
 
 # from fastspeech2.evaluate import evaluate
 from evaluate import evaluate
@@ -28,19 +28,27 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main(args, configs):
     print("Prepare training ...")
 
-    preprocess_config, model_config, train_config = configs
+    # preprocess_config, model_config, train_config = configs
+
+    import test
+    dataset_config, model_config, train_config = test.get_test_configs()
+    restore_step = 0
+
+
+    
+
+    dataset_feature_stats = DatasetFeatureStats.from_json(
+        dataset_config.path_config.stats_file,
+        dataset_config.path_config.speaker_map_file,
+    )
 
     # Get dataset
-    # dataset = OriginalDataset(
-    #     "train.txt", preprocess_config, train_config, sort=True, drop_last=True
-    # )
     dataset = OriginalDatasetWithSentiment(
-        meta_file="data/augmented_data/LibriTTS-original/train.txt",
-        speaker_map_file="data/augmented_data/LibriTTS-original/speakers.json",
-        feature_dir="data/augmented_data/LibriTTS-original",
-        sentiment_file="data/original/LibriTTS/sentiment_scores_libri-tts.csv",
+        dataset_path_config=dataset_config.path_config,
+        dataset_preprocessing_config=dataset_config.preprocessing_config,
+        split=DatasetSplit.TRAIN,
     )
-    batch_size = train_config["optimizer"]["batch_size"]
+    batch_size = train_config.step_config.batch_size
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -50,38 +58,47 @@ def main(args, configs):
     )
 
     # Prepare model
-    model, optimizer = get_model(args, configs, device, train=True)
+    model, optimizer = get_model(
+        model_config,
+        dataset_config.feature_properties_config,
+        dataset_feature_stats,
+        device,
+        train_config.optimizer_config,
+        True
+    )
     model = nn.DataParallel(model)
     num_param = get_param_num(model)
-    Loss = FastSpeech2Loss(preprocess_config, model_config).to(device)
+    Loss = FastSpeech2Loss(
+        dataset_config.feature_properties_config
+    ).to(device)
     print("Number of FastSpeech2 Parameters:", num_param)
 
     # Load vocoder
-    vocoder = get_vocoder(model_config, device)
+    vocoder = get_vocoder(model_config.vocoder_config, device)
 
     # Init logger
-    for p in train_config["path"].values():
+    for p in [ train_config.path_config.ckpt_path, train_config.path_config.log_path, train_config.path_config.result_path ]:
         os.makedirs(p, exist_ok=True)
-    train_log_path = os.path.join(train_config["path"]["log_path"], "train")
-    val_log_path = os.path.join(train_config["path"]["log_path"], "val")
+    train_log_path = os.path.join(train_config.path_config.log_path, "train")
+    val_log_path = os.path.join(train_config.path_config.log_path, "val")
     os.makedirs(train_log_path, exist_ok=True)
     os.makedirs(val_log_path, exist_ok=True)
     train_logger = SummaryWriter(train_log_path)
     val_logger = SummaryWriter(val_log_path)
 
     # Training
-    step = args.restore_step + 1
+    step = restore_step + 1
     epoch = 1
-    grad_acc_step = train_config["optimizer"]["grad_acc_step"]
-    grad_clip_thresh = train_config["optimizer"]["grad_clip_thresh"]
-    total_step = train_config["step"]["total_step"]
-    log_step = train_config["step"]["log_step"]
-    save_step = train_config["step"]["save_step"]
-    synth_step = train_config["step"]["synth_step"]
-    val_step = train_config["step"]["val_step"]
+    grad_acc_step = train_config.optimizer_config.grad_acc_step
+    grad_clip_thresh = train_config.optimizer_config.grad_clip_thresh
+    total_step = train_config.step_config.total_step
+    log_step = train_config.step_config.log_step
+    save_step = train_config.step_config.save_step
+    synth_step = train_config.step_config.synth_step
+    val_step = train_config.step_config.val_step
 
     total_step_bar = tqdm(total=total_step, desc="Training", position=0)
-    total_step_bar.n = args.restore_step
+    total_step_bar.n = restore_step
     total_step_bar.update()
 
     while True:
@@ -131,25 +148,20 @@ def main(args, configs):
                 log(train_logger, step, losses=losses)
 
             if step % synth_step == 0:
-                stats_file = os.path.join(
-                    preprocess_config["path"]["preprocessed_path"], "stats.json"
-                )
                 fig, wav_reconstruction, wav_prediction, tag = synth_one_sample(
                     batch_torch,
                     output,
                     vocoder,
-                    model_config,
-                    stats_file,
-                    preprocess_config,
+                    model_config.vocoder_config,
+                    dataset_feature_stats,
+                    dataset_config.feature_properties_config,
                 )
                 log(
                     train_logger,
                     fig=fig,
                     tag="Training/step_{}_{}".format(step, tag),
                 )
-                sampling_rate = preprocess_config["preprocessing"]["audio"][
-                    "sampling_rate"
-                ]
+                sampling_rate = dataset_config.feature_properties_config.sampling_rate
                 log(
                     train_logger,
                     audio=wav_reconstruction,
@@ -165,10 +177,16 @@ def main(args, configs):
 
             if step % val_step == 0:
                 model.eval()
-                stats_file = os.path.join(
-                    preprocess_config["path"]["preprocessed_path"], "stats.json"
-                )       # TODO: do not hardcode this
-                message = evaluate(model, step, configs, stats_file, val_logger, vocoder)
+                message = evaluate(
+                    model,
+                    step,
+                    batch_size,
+                    dataset_config,
+                    model_config.vocoder_config,
+                    dataset_feature_stats,
+                    dataset_config.feature_properties_config,
+                    val_logger,
+                    vocoder)
                 with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                     f.write(message + "\n")
                 total_step_bar.write(message)
@@ -182,7 +200,7 @@ def main(args, configs):
                         "optimizer": optimizer._optimizer.state_dict(),
                     },
                     os.path.join(
-                        train_config["path"]["ckpt_path"],
+                        train_config.path_config.ckpt_path,
                         "{}.pth.tar".format(step),
                     ),
                 )
@@ -197,36 +215,37 @@ def main(args, configs):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--restore_step", type=int, default=0)
-    parser.add_argument(
-        "-p",
-        "--preprocess_config",
-        type=str,
-        # required=True,
-        help="path to preprocess.yaml",
-        default="config/LibriTTS/preprocess.yaml",
-    )
-    parser.add_argument(
-        "-m", "--model_config", type=str, 
-        # required=True, 
-        help="path to model.yaml",
-        default="config/LibriTTS/model.yaml",
-    )
-    parser.add_argument(
-        "-t", "--train_config", type=str, 
-        # required=True, 
-        help="path to train.yaml",
-        default="config/LibriTTS/train.yaml",
-    )
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--restore_step", type=int, default=0)
+    # parser.add_argument(
+    #     "-p",
+    #     "--preprocess_config",
+    #     type=str,
+    #     # required=True,
+    #     help="path to preprocess.yaml",
+    #     default="config/LibriTTS/preprocess.yaml",
+    # )
+    # parser.add_argument(
+    #     "-m", "--model_config", type=str, 
+    #     # required=True, 
+    #     help="path to model.yaml",
+    #     default="config/LibriTTS/model.yaml",
+    # )
+    # parser.add_argument(
+    #     "-t", "--train_config", type=str, 
+    #     # required=True, 
+    #     help="path to train.yaml",
+    #     default="config/LibriTTS/train.yaml",
+    # )
+    # args = parser.parse_args()
 
-    # Read Config
-    preprocess_config = yaml.load(
-        open(args.preprocess_config, "r"), Loader=yaml.FullLoader
-    )
-    model_config = yaml.load(open(args.model_config, "r"), Loader=yaml.FullLoader)
-    train_config = yaml.load(open(args.train_config, "r"), Loader=yaml.FullLoader)
-    configs = (preprocess_config, model_config, train_config)
+    # # Read Config
+    # preprocess_config = yaml.load(
+    #     open(args.preprocess_config, "r"), Loader=yaml.FullLoader
+    # )
+    # model_config = yaml.load(open(args.model_config, "r"), Loader=yaml.FullLoader)
+    # train_config = yaml.load(open(args.train_config, "r"), Loader=yaml.FullLoader)
+    # configs = (preprocess_config, model_config, train_config)
 
-    main(args, configs)
+    # main(args, configs)
+    main(None, None)

@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -148,3 +149,49 @@ class DataBatchTorch:
     def __iter__(self):
         for sample in self.data_samples:
             yield sample
+
+class DatasetFeatureStats:
+
+    def __init__(self, 
+                 pitch_min: float, 
+                 pitch_max: float, 
+                 pitch_mean: float, 
+                 pitch_std: float, 
+                 energy_min: float, 
+                 energy_max: float, 
+                 energy_mean: float, 
+                 energy_std: float, 
+                 n_speakers: int
+                ):
+        self.pitch_min = pitch_min
+        self.pitch_max = pitch_max
+        self.pitch_mean = pitch_mean
+        self.pitch_std = pitch_std
+        self.energy_min = energy_min
+        self.energy_max = energy_max
+        self.energy_mean = energy_mean
+        self.energy_std = energy_std
+        self.n_speakers = n_speakers
+
+    def __repr__(self):
+        return f"DatasetStats(pitch_min={self.pitch_min}, pitch_max={self.pitch_max}, energy_min={self.energy_min}, energy_max={self.energy_max})"
+
+    @classmethod
+    def from_json(cls, stats_file: str, speaker_file: str):
+        with open(stats_file) as f:
+            stats = json.load(f)
+            pitch_min, pitch_max, pitch_mean, pitch_std = stats["pitch"]
+            energy_min, energy_max, energy_mean, energy_std = stats["energy"]
+        with open(speaker_file) as f:
+            n_speakers = len(json.load(f))
+        return cls(
+            pitch_min=pitch_min,
+            pitch_max=pitch_max,
+            pitch_mean=pitch_mean,
+            pitch_std=pitch_std,
+            energy_min=energy_min,
+            energy_max=energy_max,
+            energy_mean=energy_mean,
+            energy_std=energy_std,
+            n_speakers=n_speakers
+        )

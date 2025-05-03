@@ -4,27 +4,39 @@ import json
 import torch
 import numpy as np
 
+from ..dataset.data_models import DatasetFeatureStats
+
+from ..config import DatasetFeaturePropertiesConfig, ModelConfig, ModelVocoderConfig, TrainOptimizerConfig
+
 from .. import hifigan
 from ..model import FastSpeech2, ScheduledOptim
 
 
-def get_model(args, configs, device, train=False) -> FastSpeech2:
-    (preprocess_config, model_config, train_config) = configs
+def get_model(model_config: ModelConfig,
+              dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
+              dataset_feature_stats: DatasetFeatureStats,
+              device, 
+              train_optimizer_config: TrainOptimizerConfig,
+              train=False,
+              restore_step: int|None =None,
+              ckpt_path: str|None = None,
+              ) -> FastSpeech2:
 
-    model = FastSpeech2(preprocess_config, model_config).to(device)
-    if args.restore_step:
+    model = FastSpeech2(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
+    if restore_step:
         ckpt_path = os.path.join(
-            train_config["path"]["ckpt_path"],              # TODO: need to be refactored
-            "{}.pth.tar".format(args.restore_step),
+            ckpt_path,
+            "{}.pth.tar".format(restore_step),
         )
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt["model"])
 
     if train:
+        init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
         scheduled_optim = ScheduledOptim(
-            model, train_config, model_config, args.restore_step
+            model, train_optimizer_config, init_lr, restore_step
         )
-        if args.restore_step:
+        if restore_step:
             scheduled_optim.load_state_dict(ckpt["optimizer"])
         model.train()
         return model, scheduled_optim
@@ -39,9 +51,9 @@ def get_param_num(model):
     return num_param
 
 
-def get_vocoder(config, device):
-    name = config["vocoder"]["model"]           # TODO: need to be refactored
-    speaker = config["vocoder"]["speaker"]      # TODO: need to be refactored
+def get_vocoder(vocoder_config: ModelVocoderConfig, device):
+    name = vocoder_config.model
+    speaker = vocoder_config.speaker
 
     if name == "MelGAN":
         if speaker == "LJSpeech":
@@ -59,9 +71,9 @@ def get_vocoder(config, device):
     elif name == "HiFi-GAN":
         hifigan_dir = os.path.dirname(hifigan.__file__)
         with open(os.path.join(hifigan_dir, "config", "config.json"), "r") as f:
-            config = json.load(f)
-        config = hifigan.AttrDict(config)
-        vocoder = hifigan.Generator(config)
+            vocoder_config = json.load(f)
+        vocoder_config = hifigan.AttrDict(vocoder_config)
+        vocoder = hifigan.Generator(vocoder_config)
         if speaker == "LJSpeech":
             ckpt = torch.load(os.path.join(hifigan_dir, "ckpt", "generator_LJSpeech.pth.tar"))
         elif speaker == "universal":
@@ -76,19 +88,17 @@ def get_vocoder(config, device):
     return vocoder
 
 
-def vocoder_infer(mels, vocoder, model_config, preprocess_config, lengths=None):
-    name = model_config["vocoder"]["model"]                         # TODO: need to be refactored
+def vocoder_infer(mels, vocoder, model_name, max_wav_value, lengths=None):
     with torch.no_grad():
-        if name == "MelGAN":
+        if model_name == "MelGAN":
             wavs = vocoder.inverse(mels / np.log(10))
-        elif name == "HiFi-GAN":
+        elif model_name == "HiFi-GAN":
             wavs = vocoder(mels).squeeze(1)
         else:
-            raise ValueError("Unknown vocoder: {}".format(name))
+            raise ValueError("Unknown vocoder: {}".format(model_name))
 
     wavs = (
-        wavs.cpu().numpy()
-        * preprocess_config["preprocessing"]["audio"]["max_wav_value"]          # TODO: need to be refactored
+        wavs.cpu().numpy() * max_wav_value
     ).astype("int16")
     wavs = [wav for wav in wavs]
 

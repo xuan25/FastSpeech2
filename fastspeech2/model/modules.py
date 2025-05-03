@@ -9,6 +9,10 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 
+from fastspeech2.dataset.data_models import DatasetFeatureStats
+
+from ..config import DatasetFeaturePropertiesConfig, ModelVariancePredictorConfig
+
 from ..utils.tools import get_mask_from_lengths
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -38,35 +42,33 @@ def pad(input_ele, mel_max_length=None):
 class VarianceAdaptor(nn.Module):
     """Variance Adaptor"""
 
-    def __init__(self, preprocess_config, model_config):
+    def __init__(self, input_size: int, variance_embedding_config: ModelVariancePredictorConfig, variance_predictor_config: ModelVariancePredictorConfig, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, dataset_feature_stats: DatasetFeatureStats):
         super(VarianceAdaptor, self).__init__()
-        self.duration_predictor = VariancePredictor(model_config)
+        self.duration_predictor = VariancePredictor(input_size, variance_predictor_config)
         self.length_regulator = LengthRegulator()
-        self.pitch_predictor = VariancePredictor(model_config)
-        self.energy_predictor = VariancePredictor(model_config)
+        self.pitch_predictor = VariancePredictor(input_size, variance_predictor_config)
+        self.energy_predictor = VariancePredictor(input_size, variance_predictor_config)
 
         # TODO: need to be refactored
-        self.pitch_feature_level = preprocess_config["preprocessing"]["pitch"][
-            "feature"
-        ]
-        self.energy_feature_level = preprocess_config["preprocessing"]["energy"][
-            "feature"
-        ]
+        self.pitch_feature_level = dataset_feature_properties_config.pitch_feature_level
+        self.energy_feature_level = dataset_feature_properties_config.energy_feature_level
+
+        # TODO: need to be refactored
         assert self.pitch_feature_level in ["phoneme_level", "frame_level"]
         assert self.energy_feature_level in ["phoneme_level", "frame_level"]
 
-        pitch_quantization = model_config["variance_embedding"]["pitch_quantization"]
-        energy_quantization = model_config["variance_embedding"]["energy_quantization"]
-        n_bins = model_config["variance_embedding"]["n_bins"]
+        pitch_quantization = variance_embedding_config.pitch_quantization
+        energy_quantization = variance_embedding_config.energy_quantization
+        n_bins = variance_embedding_config.n_bins
+        
+        # TODO: need to be refactored
         assert pitch_quantization in ["linear", "log"]
         assert energy_quantization in ["linear", "log"]
-        with open(
-            os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json")
-        ) as f:
-            # TODO: need to be refactored
-            stats = json.load(f)
-            pitch_min, pitch_max = stats["pitch"][:2]
-            energy_min, energy_max = stats["energy"][:2]
+
+        pitch_min = dataset_feature_stats.pitch_min
+        pitch_max = dataset_feature_stats.pitch_max
+        energy_min = dataset_feature_stats.energy_min
+        energy_max = dataset_feature_stats.energy_max
 
         if pitch_quantization == "log":
             self.pitch_bins = nn.Parameter(
@@ -94,10 +96,10 @@ class VarianceAdaptor(nn.Module):
             )
 
         self.pitch_embedding = nn.Embedding(
-            n_bins, model_config["transformer"]["encoder_hidden"]
+            n_bins, input_size
         )
         self.energy_embedding = nn.Embedding(
-            n_bins, model_config["transformer"]["encoder_hidden"]
+            n_bins, input_size
         )
 
     def get_pitch_embedding(self, x, target, mask, control):
@@ -226,15 +228,14 @@ class LengthRegulator(nn.Module):
 class VariancePredictor(nn.Module):
     """Duration, Pitch and Energy Predictor"""
 
-    def __init__(self, model_config):
+    def __init__(self, input_size: int, variance_predictor_config: ModelVariancePredictorConfig):
         super(VariancePredictor, self).__init__()
 
-        # TODO: need to be refactored
-        self.input_size = model_config["transformer"]["encoder_hidden"]
-        self.filter_size = model_config["variance_predictor"]["filter_size"]
-        self.kernel = model_config["variance_predictor"]["kernel_size"]
-        self.conv_output_size = model_config["variance_predictor"]["filter_size"]
-        self.dropout = model_config["variance_predictor"]["dropout"]
+        self.input_size = input_size
+        self.filter_size = variance_predictor_config.filter_size
+        self.kernel = variance_predictor_config.kernel_size
+        self.conv_output_size = variance_predictor_config.filter_size
+        self.dropout = variance_predictor_config.dropout
 
         self.conv_layer = nn.Sequential(
             OrderedDict(

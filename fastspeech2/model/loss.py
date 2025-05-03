@@ -1,22 +1,31 @@
 import torch
 import torch.nn as nn
 
+from ..config import DatasetFeaturePropertiesConfig
+
 from ..dataset.data_models import DataBatch, DataBatchTorch
 from .fastspeech2 import FastSpeech2Output
 from .data_models import FastSpeech2LossResult
 class FastSpeech2Loss(nn.Module):
     """ FastSpeech2 Loss """
 
-    def __init__(self, preprocess_config, model_config):
+    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig):
         super(FastSpeech2Loss, self).__init__()
-        
-        # TODO: need to be refactored
-        self.pitch_feature_level = preprocess_config["preprocessing"]["pitch"][
-            "feature"
-        ]
-        self.energy_feature_level = preprocess_config["preprocessing"]["energy"][
-            "feature"
-        ]
+
+        self.pitch_feature_level = dataset_feature_properties_config.pitch_feature_level
+        self.energy_feature_level = dataset_feature_properties_config.energy_feature_level
+
+        # TODO: refactor this to use a config enum
+        assert self.pitch_feature_level in [
+            "phoneme_level",
+            "frame_level",
+        ], f"Invalid pitch feature level: {self.pitch_feature_level}"
+
+        assert self.energy_feature_level in [
+            "phoneme_level",
+            "frame_level",
+        ], f"Invalid energy feature level: {self.energy_feature_level}"
+
         self.mse_loss = nn.MSELoss()
         self.mae_loss = nn.L1Loss()
 

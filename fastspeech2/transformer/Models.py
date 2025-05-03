@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from ..config import ModelTransformerConfig
+
 from . import Constants
 from .Layers import FFTBlock
 from ..text.symbols import symbols
@@ -33,25 +35,24 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
 class Encoder(nn.Module):
     """ Encoder """
 
-    def __init__(self, config):
+    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int):
         super(Encoder, self).__init__()
 
-        # TODO: need to be refactored
-        n_position = config["max_seq_len"] + 1
+        n_position = max_seq_len + 1
         n_src_vocab = len(symbols) + 1
-        d_word_vec = config["transformer"]["encoder_hidden"]
-        n_layers = config["transformer"]["encoder_layer"]
-        n_head = config["transformer"]["encoder_head"]
+        d_word_vec = config_transformer.encoder_hidden
+        n_layers = config_transformer.encoder_layer
+        n_head = config_transformer.encoder_head
         d_k = d_v = (
-            config["transformer"]["encoder_hidden"]
-            // config["transformer"]["encoder_head"]
+            config_transformer.encoder_hidden
+            // config_transformer.encoder_head
         )
-        d_model = config["transformer"]["encoder_hidden"]
-        d_inner = config["transformer"]["conv_filter_size"]
-        kernel_size = config["transformer"]["conv_kernel_size"]
-        dropout = config["transformer"]["encoder_dropout"]
+        d_model = config_transformer.encoder_hidden
+        d_inner = config_transformer.conv_filter_size
+        kernel_size = config_transformer.conv_kernel_size
+        dropout = config_transformer.encoder_dropout
 
-        self.max_seq_len = config["max_seq_len"]
+        self.max_seq_len = max_seq_len
         self.d_model = d_model
 
         self.src_word_emb = nn.Embedding(
@@ -71,7 +72,7 @@ class Encoder(nn.Module):
             ]
         )
 
-    def forward(self, src_seq, mask, return_attns=False):
+    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, return_attns=False):
 
         enc_slf_attn_list = []
         batch_size, max_len = src_seq.shape[0], src_seq.shape[1]
@@ -104,24 +105,23 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     """ Decoder """
 
-    def __init__(self, config):
+    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int):
         super(Decoder, self).__init__()
 
-        # TODO: need to be refactored
-        n_position = config["max_seq_len"] + 1
-        d_word_vec = config["transformer"]["decoder_hidden"]
-        n_layers = config["transformer"]["decoder_layer"]
-        n_head = config["transformer"]["decoder_head"]
+        n_position = max_seq_len + 1
+        d_word_vec = config_transformer.decoder_hidden
+        n_layers = config_transformer.decoder_layer
+        n_head = config_transformer.decoder_head
         d_k = d_v = (
-            config["transformer"]["decoder_hidden"]
-            // config["transformer"]["decoder_head"]
+            config_transformer.decoder_hidden
+            // config_transformer.decoder_head
         )
-        d_model = config["transformer"]["decoder_hidden"]
-        d_inner = config["transformer"]["conv_filter_size"]
-        kernel_size = config["transformer"]["conv_kernel_size"]
-        dropout = config["transformer"]["decoder_dropout"]
+        d_model = config_transformer.decoder_hidden
+        d_inner = config_transformer.conv_filter_size
+        kernel_size = config_transformer.conv_kernel_size
+        dropout = config_transformer.decoder_dropout
 
-        self.max_seq_len = config["max_seq_len"]
+        self.max_seq_len = max_seq_len
         self.d_model = d_model
 
         self.position_enc = nn.Parameter(
@@ -138,7 +138,7 @@ class Decoder(nn.Module):
             ]
         )
 
-    def forward(self, enc_seq, mask, return_attns=False):
+    def forward(self, enc_seq: torch.Tensor, mask: torch.Tensor, return_attns=False):
 
         dec_slf_attn_list = []
         batch_size, max_len = enc_seq.shape[0], enc_seq.shape[1]

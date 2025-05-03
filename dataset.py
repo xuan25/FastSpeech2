@@ -1,4 +1,5 @@
 import csv
+import enum
 import json
 import os
 
@@ -6,6 +7,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import tqdm
 
+from fastspeech2.config import DatasetConfig, DatasetPathConfig, DatasetFeaturePropertiesConfig, DatasetPreprocessingConfig
 from fastspeech2.dataset.data_models import DataBatch, DataSample
 from fastspeech2.text import text_to_sequence
 
@@ -27,24 +29,35 @@ def load_sentiment(file):
 
     return data_ids, labels, label_names
 
+class DatasetSplit(enum.Enum):
+    TRAIN = "train"
+    VAL = "val"
+
 class OriginalDatasetWithSentiment(Dataset):
     def __init__(
-        self, meta_file: str, speaker_map_file: str, feature_dir: str, sentiment_file: str, text_cleaners = ["english_cleaners"], sort=False, drop_last=False, 
+        self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit, sort=False
     ):
-        self.feature_dir = feature_dir
-        self.text_cleaners = text_cleaners
-
+        self.feature_dir = dataset_path_config.feature_dir
+        self.text_cleaners = dataset_preprocessing_config.text_cleaners
+        
+        meta_file = None
+        if split == DatasetSplit.TRAIN:
+            meta_file = dataset_path_config.meta_file_train
+        elif split == DatasetSplit.VAL:
+            meta_file = dataset_path_config.meta_file_val
+        else:
+            raise ValueError(f"Unknown split: {split}")
+        
         self.basename, self.speaker, self.text, self.raw_text = self.process_meta(
             meta_file
         )
-        with open(speaker_map_file) as f:
+        with open(dataset_path_config.speaker_map_file) as f:
             self.speaker_map = json.load(f)
         self.sort = sort
-        self.drop_last = drop_last
 
         # Load sentiment labels if provided
-        if sentiment_file:
-            sent_data_ids, sent_labels, label_names = load_sentiment(sentiment_file)
+        if dataset_path_config.sentiment_file:
+            sent_data_ids, sent_labels, label_names = load_sentiment(dataset_path_config.sentiment_file)
             self.sentiment_map = {data_id: sent_label for data_id, sent_label in zip(sent_data_ids, sent_labels)}
         else:
             self.sentiment_map = None
@@ -159,20 +172,28 @@ def load_meta(filename):
 
 class TextOnlyDatasetWithSentiment(Dataset):
     def __init__(
-        self, meta_file: str, speaker_map_file: str, sentiment_file: str, text_cleaners=["english_cleaners"]
+        self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit
     ):
 
-        self.text_cleaners = text_cleaners
+        self.text_cleaners = dataset_preprocessing_config.text_cleaners
+
+        meta_file = None
+        if split == DatasetSplit.TRAIN:
+            meta_file = dataset_path_config.meta_file_train
+        elif split == DatasetSplit.VAL:
+            meta_file = dataset_path_config.meta_file_val
+        else:
+            raise ValueError(f"Unknown split: {split}")
 
         # load metadata
         self.data_ids, self.speakers, self.texts, self.raw_texts = load_meta(meta_file)
 
-        with open(speaker_map_file, mode="r", encoding="utf-8") as f:
+        with open(dataset_path_config.speaker_map_file, mode="r", encoding="utf-8") as f:
             self.speaker_map = json.load(f)
 
         # Load sentiment labels if provided
-        if sentiment_file:
-            sent_data_ids, sent_labels, label_names = load_sentiment(sentiment_file)
+        if dataset_path_config.sentiment_file:
+            sent_data_ids, sent_labels, label_names = load_sentiment(dataset_path_config.sentiment_file)
             self.sentiment_map = {data_id: sent_label for data_id, sent_label in zip(sent_data_ids, sent_labels)}
         else:
             self.sentiment_map = None
@@ -211,14 +232,16 @@ class TextOnlyDatasetWithSentiment(Dataset):
 def main():
     
     from torch.utils.data import DataLoader
- 
-    # Example usage
+
+    import test
+
+    dataset_config, _, _ = test.get_test_configs()
+
     dataset = OriginalDatasetWithSentiment(
-        meta_file="data/augmented_data/LibriTTS-original/val.txt",
-        speaker_map_file="data/augmented_data/LibriTTS-original/speakers.json",
-        feature_dir="data/augmented_data/LibriTTS-original",
-        sentiment_file="data/original/LibriTTS/sentiment_scores_libri-tts.csv",
-        text_cleaners=["english_cleaners"],
+        dataset_path_config=dataset_config.path_config,
+        dataset_preprocessing_config=dataset_config.preprocessing_config,
+        split=DatasetSplit.VAL,
+        sort=True
     )
     
     for i in range(3):
