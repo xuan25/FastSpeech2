@@ -1,9 +1,8 @@
 path:
-  ckpt_path: "./output/ckpt/LibriTTS"
-  log_path: "./output/log/LibriTTS"
-  result_path: "./output/result/LibriTTS"
+  ckpt_path: "../../output/ckpt/LibriTTS"
+  log_path: "../../output/log/LibriTTS"
+  result_path: "../../output/result/LibriTTS"
 optimizer:
-  batch_size: 64
   betas: [0.9, 0.98]
   eps: 0.000000001
   weight_decay: 0.0
@@ -13,6 +12,7 @@ optimizer:
   anneal_steps: [300000, 400000, 500000]
   anneal_rate: 0.3
 step:
+  batch_size: 16
   total_step: 900000
   log_step: 100
   synth_step: 1000

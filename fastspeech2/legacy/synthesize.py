@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from g2p_en import G2p
 from pypinyin import pinyin, Style
 
-from utils.model import get_model, get_vocoder
+from utils.model import get_model_train, get_vocoder
 from utils.tools import to_device, synth_samples
 from dataset import TextDataset
 from text import text_to_sequence
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     configs = (preprocess_config, model_config, train_config)
 
     # Get model
-    model = get_model(args, configs, device, train=False)
+    model = get_model_train(args, configs, device, train=False)
 
     # Load vocoder
     vocoder = get_vocoder(model_config, device)

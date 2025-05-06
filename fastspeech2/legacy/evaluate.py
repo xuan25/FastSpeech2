@@ -6,7 +6,7 @@ import yaml
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from utils.model import get_model, get_vocoder
+from utils.model import get_model_train, get_vocoder
 from utils.tools import to_device, log, synth_one_sample
 from model import FastSpeech2Loss
 from dataset import Dataset
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     configs = (preprocess_config, model_config, train_config)
 
     # Get model
-    model = get_model(args, configs, device, train=False).to(device)
+    model = get_model_train(args, configs, device, train=False).to(device)
 
     message = evaluate(model, args.restore_step, configs)
     print(message)
