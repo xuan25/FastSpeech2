@@ -1,25 +1,15 @@
 import argparse
-import os
-
 import torch
-import yaml
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from fastspeech2.config import DatasetConfig, DatasetFeaturePropertiesConfig, DatasetPathConfig, DatasetPreprocessingConfig, ModelVocoderConfig
-from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
-from fastspeech2.model.data_models import FastSpeech2LossResult
-from fastspeech2.model.fastspeech2 import FastSpeech2Output
-from fastspeech2.utils.model import get_model, get_vocoder
-from fastspeech2.utils.tools import log, synth_one_sample
-from fastspeech2.model import FastSpeech2Loss
-# from dataset import Dataset
-from dataset import DatasetSplit, OriginalDatasetWithSentiment
-
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, ModelVocoderConfig, TrainConfig
+from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
+from .model.data_models import FastSpeech2LossResult
+from .model.fastspeech2 import FastSpeech2Output
+from .utils.model import get_model_infer
+from .utils.tools import log, synth_one_sample
+from .model import FastSpeech2Loss
+from .dataset.dataset import DatasetSplit, OriginalDatasetWithSentiment
 
 def evaluate(model, step,
              batch_size,
@@ -27,8 +17,7 @@ def evaluate(model, step,
              vocoder_config: ModelVocoderConfig,
              stats: DatasetFeatureStats,
              feature_properties_config: DatasetFeaturePropertiesConfig, 
-             logger=None, vocoder=None):
-    # preprocess_config, model_config, train_config = configs
+             logger=None, vocoder=None, device="cpu"):
 
     # Get dataset
     dataset = OriginalDatasetWithSentiment(
@@ -36,14 +25,7 @@ def evaluate(model, step,
         dataset_preprocessing_config=dataset_config.preprocessing_config,
         split=DatasetSplit.VAL,
     )
-    # dataset = SentimentBalancedDataset(
-    #     meta_file="preprocessed_data/LibriTTS/val.txt",
-    #     sentiment_path="sentiment/sentiment_scores_libri-tts.csv",
-    #     feature_dir="preprocessed_data/LibriTTS",
-    #     speaker_map_file="preprocessed_data/LibriTTS/speakers.json",
-    #     text_cleaners=["english_cleaners"],
-    # )
-    # batch_size = train_config["optimizer"]["batch_size"]
+
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -53,10 +35,9 @@ def evaluate(model, step,
     )
 
     # Get loss function
-    Loss = FastSpeech2Loss(dataset_config.feature_properties_config).to(device)
+    loss_func = FastSpeech2Loss(dataset_config.feature_properties_config).to(device)
 
     # Evaluation
-
     loss_sums = FastSpeech2LossResult(
         total_loss=torch.tensor(0.0),
         mel_loss=torch.tensor(0.0),
@@ -74,7 +55,7 @@ def evaluate(model, step,
             output: FastSpeech2Output = model(batch_torch)
 
             # Cal Loss
-            losses: FastSpeech2LossResult = Loss(batch_torch, output)
+            losses: FastSpeech2LossResult = loss_func(batch_torch, output)
 
             loss_sums.total_loss += losses.total_loss.item() * batch_torch.batch_size
             loss_sums.mel_loss += losses.mel_loss.item() * batch_torch.batch_size
@@ -137,37 +118,68 @@ def evaluate(model, step,
 
     return message
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--ckpt_path", 
+        # required=True, 
+        type=int, 
+        default=None
+    )
+    parser.add_argument(
+        "-d",
+        "--dataset_config",
+        type=str,
+        required=True,
+        help="path to dataset.yaml",
+    )
+    parser.add_argument(
+        "-m", "--model_config",
+        type=str,
+        required=True,
+        help="path to model.yaml"
+    )
+    parser.add_argument(
+        "-t",
+        "--train_config",
+        type=str,
+        required=True,
+        help="path to train.yaml"
+    )
+    args = parser.parse_args()
 
-# if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--restore_step", type=int, default=30000)
-    # parser.add_argument(
-    #     "-p",
-    #     "--preprocess_config",
-    #     type=str,
-    #     required=True,
-    #     help="path to preprocess.yaml",
-    # )
-    # parser.add_argument(
-    #     "-m", "--model_config", type=str, required=True, help="path to model.yaml"
-    # )
-    # parser.add_argument(
-    #     "-t", "--train_config", type=str, required=True, help="path to train.yaml"
-    # )
-    # args = parser.parse_args()
+    ckpt_path = args.ckpt_path
+    dataset_config = DatasetConfig.load_from_yaml(args.dataset_config)
+    model_config = ModelConfig.load_from_yaml(args.model_config)
+    train_config = TrainConfig.load_from_yaml(args.train_config)
 
-    # # Read Config
-    # preprocess_config = yaml.load(
-    #     open(args.preprocess_config, "r"), Loader=yaml.FullLoader
-    # )
-    # model_config = yaml.load(open(args.model_config, "r"), Loader=yaml.FullLoader)
-    # train_config = yaml.load(open(args.train_config, "r"), Loader=yaml.FullLoader)
-    # configs = (preprocess_config, model_config, train_config)
+    dataset_stats = DatasetFeatureStats.from_json(
+        dataset_config.path_config.stats_file,
+        dataset_config.path_config.speaker_map_file,
+    )
 
-    # # Get model
-    # model = get_model(args, configs, device, train=False).to(device)
+    model = get_model_infer(
+        ckpt_path,
+        model_config,
+        dataset_config.feature_properties_config,
+        dataset_stats,
+        device=device
+    )
 
-    # stats_file = os.path.join(preprocess_config["path"]["preprocessed_path"], "stats.json") # TODO: do not hardcode this
-    # message = evaluate(model, args.restore_step, configs, stats_file)
-    # print(message)
+    message = evaluate(
+        model,
+        ckpt_path,
+        train_config.step_config.batch_size,
+        dataset_config,
+        model_config.vocoder_config,
+        dataset_stats,
+        dataset_config.feature_properties_config,
+        device=device
+    )
+
+    print(message)
+
+if __name__ == "__main__":
+    main()

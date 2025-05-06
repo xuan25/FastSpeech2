@@ -27,11 +27,7 @@ class ScheduledOptim(Optimizer):
         self._optimizer.step()
 
     def zero_grad(self):
-        # print(self.init_lr)
         self._optimizer.zero_grad()
-
-    def load_state_dict(self, path):
-        self._optimizer.load_state_dict(path)
 
     def _get_lr_scale(self):
         lr = np.min(

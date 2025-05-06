@@ -2,45 +2,63 @@ import argparse
 import os
 
 import torch
-import yaml
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-# from fastspeech2.dataset import Dataset
-from fastspeech2.dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
-from fastspeech2.model.fastspeech2 import FastSpeech2, FastSpeech2Output
-from fastspeech2.model.loss import FastSpeech2LossResult
-from fastspeech2.model.optimizer import ScheduledOptim
-from fastspeech2.utils.model import get_model, get_vocoder, get_param_num
-from fastspeech2.utils.tools import log, synth_one_sample
-from fastspeech2.model import FastSpeech2Loss
-# from fastspeech2.dataset import Dataset
-from dataset import DatasetSplit, OriginalDatasetWithSentiment
+from .config import DatasetConfig, ModelConfig, TrainConfig
+from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
+from .model.fastspeech2 import FastSpeech2, FastSpeech2Output
+from .model.loss import FastSpeech2LossResult
+from .model.optimizer import ScheduledOptim
+from .utils.model import get_model_train, get_vocoder, get_param_num
+from .utils.tools import log, synth_one_sample
+from .model import FastSpeech2Loss
+from .dataset.dataset import DatasetSplit, OriginalDatasetWithSentiment
 
-# from fastspeech2.evaluate import evaluate
-from evaluate import evaluate
+from .evaluate import evaluate
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--restore_ckpt", type=str, default=None)
+    parser.add_argument(
+        "-d",
+        "--dataset_config",
+        type=str,
+        # required=True,
+        help="path to dataset.yaml",
+        default="config/LibriTTS/dataset.yaml",
+    )
+    parser.add_argument(
+        "-m", "--model_config", type=str, 
+        # required=True, 
+        help="path to model.yaml",
+        default="config/LibriTTS/model.yaml",
+    )
+    parser.add_argument(
+        "-t", "--train_config", type=str, 
+        # required=True, 
+        help="path to train.yaml",
+        default="config/LibriTTS/train.yaml",
+    )
+    args = parser.parse_args()
 
-
-def main(args, configs):
-    print("Prepare training ...")
-
-    # preprocess_config, model_config, train_config = configs
-
-    import test
-    dataset_config, model_config, train_config = test.get_test_configs()
-    restore_step = 0
-
-
-    
+    restore_ckpt = args.restore_ckpt
+    dataset_config = DatasetConfig.load_from_yaml(args.dataset_config)
+    model_config = ModelConfig.load_from_yaml(args.model_config)
+    train_config = TrainConfig.load_from_yaml(args.train_config)
 
     dataset_feature_stats = DatasetFeatureStats.from_json(
         dataset_config.path_config.stats_file,
         dataset_config.path_config.speaker_map_file,
     )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Using device:", device)
+
+    print("Prepare training ...")
+
 
     # Get dataset
     dataset = OriginalDatasetWithSentiment(
@@ -58,13 +76,13 @@ def main(args, configs):
     )
 
     # Prepare model
-    model, optimizer = get_model(
+    model, optimizer, training_steps = get_model_train(
         model_config,
         dataset_config.feature_properties_config,
         dataset_feature_stats,
         device,
         train_config.optimizer_config,
-        True
+        ckpt_path=restore_ckpt,
     )
     model = nn.DataParallel(model)
     num_param = get_param_num(model)
@@ -87,8 +105,8 @@ def main(args, configs):
     val_logger = SummaryWriter(val_log_path)
 
     # Training
-    step = restore_step + 1
-    epoch = 1
+    step = training_steps + 1
+    epoch = training_steps // len(loader) + 1
     grad_acc_step = train_config.optimizer_config.grad_acc_step
     grad_clip_thresh = train_config.optimizer_config.grad_clip_thresh
     total_step = train_config.step_config.total_step
@@ -98,7 +116,7 @@ def main(args, configs):
     val_step = train_config.step_config.val_step
 
     total_step_bar = tqdm(total=total_step, desc="Training", position=0)
-    total_step_bar.n = restore_step
+    total_step_bar.n = training_steps
     total_step_bar.update()
 
     while True:
@@ -186,7 +204,7 @@ def main(args, configs):
                     dataset_feature_stats,
                     dataset_config.feature_properties_config,
                     val_logger,
-                    vocoder)
+                    vocoder,device)
                 with open(os.path.join(val_log_path, "log.txt"), "a") as f:
                     f.write(message + "\n")
                 total_step_bar.write(message)
@@ -198,6 +216,16 @@ def main(args, configs):
                     {
                         "model": model.module.state_dict(),
                         "optimizer": optimizer._optimizer.state_dict(),
+                        "training_stats":
+                        {
+                            "steps": step,
+                        },
+                        "configs": {
+                            "dataset_config": dataset_config,
+                            "model_config": model_config,
+                            "train_config": train_config,
+                        },
+                        "dataset_feature_stats": dataset_feature_stats,
                     },
                     os.path.join(
                         train_config.path_config.ckpt_path,
@@ -215,37 +243,5 @@ def main(args, configs):
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--restore_step", type=int, default=0)
-    # parser.add_argument(
-    #     "-p",
-    #     "--preprocess_config",
-    #     type=str,
-    #     # required=True,
-    #     help="path to preprocess.yaml",
-    #     default="config/LibriTTS/preprocess.yaml",
-    # )
-    # parser.add_argument(
-    #     "-m", "--model_config", type=str, 
-    #     # required=True, 
-    #     help="path to model.yaml",
-    #     default="config/LibriTTS/model.yaml",
-    # )
-    # parser.add_argument(
-    #     "-t", "--train_config", type=str, 
-    #     # required=True, 
-    #     help="path to train.yaml",
-    #     default="config/LibriTTS/train.yaml",
-    # )
-    # args = parser.parse_args()
-
-    # # Read Config
-    # preprocess_config = yaml.load(
-    #     open(args.preprocess_config, "r"), Loader=yaml.FullLoader
-    # )
-    # model_config = yaml.load(open(args.model_config, "r"), Loader=yaml.FullLoader)
-    # train_config = yaml.load(open(args.train_config, "r"), Loader=yaml.FullLoader)
-    # configs = (preprocess_config, model_config, train_config)
-
-    # main(args, configs)
-    main(None, None)
+    
+    main()

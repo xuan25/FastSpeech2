@@ -7,9 +7,9 @@ import numpy as np
 from torch.utils.data import Dataset
 import tqdm
 
-from fastspeech2.config import DatasetConfig, DatasetPathConfig, DatasetFeaturePropertiesConfig, DatasetPreprocessingConfig
-from fastspeech2.dataset.data_models import DataBatch, DataSample
-from fastspeech2.text import text_to_sequence
+from ..config import DatasetPathConfig, DatasetPreprocessingConfig
+from .data_models import DataBatch, DataSample
+from ..text import text_to_sequence
 
 def load_sentiment(file):
     with open(file, newline='', encoding="utf-8") as csvfile:

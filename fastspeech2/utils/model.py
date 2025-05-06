@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Union
 
 import torch
 import numpy as np
@@ -12,39 +13,47 @@ from .. import hifigan
 from ..model import FastSpeech2, ScheduledOptim
 
 
-def get_model(model_config: ModelConfig,
+def get_model_train(model_config: ModelConfig,
               dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
               dataset_feature_stats: DatasetFeatureStats,
               device, 
               train_optimizer_config: TrainOptimizerConfig,
-              train=False,
-              restore_step: int|None =None,
               ckpt_path: str|None = None,
-              ) -> FastSpeech2:
+              ) -> Union[FastSpeech2, ScheduledOptim, int]:
 
     model = FastSpeech2(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
-    if restore_step:
-        ckpt_path = os.path.join(
-            ckpt_path,
-            "{}.pth.tar".format(restore_step),
-        )
+    if ckpt_path:
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt["model"])
 
-    if train:
-        init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
-        scheduled_optim = ScheduledOptim(
-            model, train_optimizer_config, init_lr, restore_step
-        )
-        if restore_step:
-            scheduled_optim.load_state_dict(ckpt["optimizer"])
-        model.train()
-        return model, scheduled_optim
+    init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
+    scheduled_optim = ScheduledOptim(
+        model, train_optimizer_config, init_lr, 0
+    )
+    if ckpt_path:
+        scheduled_optim.load_state_dict(ckpt["optimizer"])
+    model.train()
+
+    training_steps = 0
+    if ckpt_path:
+        training_steps = ckpt["training_stats"]["steps"]
+
+    return model, scheduled_optim, training_steps
+
+def get_model_infer(ckpt_path, 
+              model_config: ModelConfig,
+              dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
+              dataset_feature_stats: DatasetFeatureStats, 
+              device) -> FastSpeech2:
+
+    model = FastSpeech2(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
+    if ckpt_path:
+        ckpt = torch.load(ckpt_path)
+        model.load_state_dict(ckpt["model"])
 
     model.eval()
     model.requires_grad_ = False
     return model
-
 
 def get_param_num(model):
     num_param = sum(param.numel() for param in model.parameters())
