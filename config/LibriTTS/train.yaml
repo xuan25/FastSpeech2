@@ -1,7 +1,7 @@
-path:
-  ckpt_path: "../../output/ckpt/LibriTTS"
-  log_path: "../../output/log/LibriTTS"
-  result_path: "../../output/result/LibriTTS"
+output:
+  ckpt_dir_name: "ckpt"
+  log_dir_name: "log"
+
 optimizer:
   betas: [0.9, 0.98]
   eps: 0.000000001
@@ -17,5 +17,4 @@ step:
   log_step: 100
   synth_step: 1000
   val_step: 1000
-  # save_step: 100000
   save_step: 10000

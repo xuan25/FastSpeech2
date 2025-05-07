@@ -42,12 +42,21 @@ def main():
         help="path to train.yaml",
         default="config/LibriTTS/train.yaml",
     )
+    parser.add_argument(
+        "-o", "--output_dir", type=str,
+        # required=True,
+        help="path to output directory",
+        default="output/default",
+    )
     args = parser.parse_args()
 
     restore_ckpt = args.restore_ckpt
     dataset_config = DatasetConfig.load_from_yaml(args.dataset_config)
     model_config = ModelConfig.load_from_yaml(args.model_config)
     train_config = TrainConfig.load_from_yaml(args.train_config)
+    output_dir = args.output_dir
+    ckpt_output_dir = os.path.join(output_dir, train_config.output_config.ckpt_dir_name)
+    log_output_dir = os.path.join(output_dir, train_config.output_config.log_dir_name)
 
     dataset_feature_stats = DatasetFeatureStats.from_json(
         dataset_config.path_config.stats_file,
@@ -95,12 +104,12 @@ def main():
     vocoder = get_vocoder(model_config.vocoder_config, device)
 
     # Init logger
-    for p in [ train_config.path_config.ckpt_path, train_config.path_config.log_path, train_config.path_config.result_path ]:
+    train_log_path = os.path.join(log_output_dir, "train")
+    val_log_path = os.path.join(log_output_dir, "val")
+
+    for p in [ ckpt_output_dir, train_log_path, val_log_path ]:
         os.makedirs(p, exist_ok=True)
-    train_log_path = os.path.join(train_config.path_config.log_path, "train")
-    val_log_path = os.path.join(train_config.path_config.log_path, "val")
-    os.makedirs(train_log_path, exist_ok=True)
-    os.makedirs(val_log_path, exist_ok=True)
+    
     train_logger = SummaryWriter(train_log_path)
     val_logger = SummaryWriter(val_log_path)
 
@@ -227,8 +236,8 @@ def main():
                         "dataset_feature_stats": dataset_feature_stats,
                     },
                     os.path.join(
-                        train_config.path_config.ckpt_path,
-                        "{}.pth.tar".format(step),
+                        ckpt_output_dir,
+                        "{}.pth".format(step),
                     ),
                 )
 

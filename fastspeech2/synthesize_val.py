@@ -42,12 +42,12 @@ def main():
     parser.add_argument(
         "--ckpt_path", 
         type=str, 
-        default="output/ckpt/LibriTTS/4000.pth.tar"
+        default="output/default/ckpt/4000.pth.tar"
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="output/synth_val",
+        default="output/default/synth_val",
         help="path to a source file with format like LibriTTS dataset",
     )
     parser.add_argument(

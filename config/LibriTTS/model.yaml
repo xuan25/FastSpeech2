@@ -22,7 +22,7 @@ variance_embedding:
 
 multi_speaker: True
 
-num_sentiments: 3
+use_sentiment: False
 
 max_seq_len: 1000
 
