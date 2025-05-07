@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from ..config import DatasetFeaturePropertiesConfig
 
-from ..dataset.data_models import DataBatch, DataBatchTorch
+from ..dataset.data_models import DataBatchTorch
 from .fastspeech2 import FastSpeech2Output
 from .data_models import FastSpeech2LossResult
 class FastSpeech2Loss(nn.Module):
@@ -38,6 +38,11 @@ class FastSpeech2Loss(nn.Module):
         #     energy_targets,
         #     duration_targets,
         # ) = inputs[6:]
+
+        assert inputs.mels is not None, "mel_targets is None"
+        assert inputs.pitches is not None, "pitch_targets is None"
+        assert inputs.energies is not None, "energy_targets is None"
+        assert inputs.durations is not None, "duration_targets is None"
 
         mel_targets = inputs.mels
         pitch_targets = inputs.pitches

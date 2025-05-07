@@ -4,7 +4,7 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
 
 from .config import DatasetConfig, ModelConfig, TrainConfig
@@ -76,7 +76,7 @@ def main():
     )
 
     # Prepare model
-    model, optimizer, training_steps = get_model_train(
+    model_raw, optimizer, training_steps = get_model_train(
         model_config,
         dataset_config.feature_properties_config,
         dataset_feature_stats,
@@ -84,7 +84,7 @@ def main():
         train_config.optimizer_config,
         ckpt_path=restore_ckpt,
     )
-    model = nn.DataParallel(model)
+    model = nn.DataParallel(model_raw)
     num_param = get_param_num(model)
     Loss = FastSpeech2Loss(
         dataset_config.feature_properties_config
@@ -127,7 +127,6 @@ def main():
             batch_torch: DataBatchTorch = batch.to_torch(device)
 
             # Forward
-            model: FastSpeech2 = model  # temporary fix for type hinting
             output: FastSpeech2Output = model(batch_torch)
 
             # Cal Loss

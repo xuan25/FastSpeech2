@@ -136,8 +136,8 @@ class MCDBatchProcesser(Iterator):
 
     def __init__(
             self,
-            tgt_paths: str,
-            ref_paths: str,
+            tgt_paths: list[str],
+            ref_paths: list[str],
             n_fft: int = 512,
             n_shift: int = 256,
             mcep_dim: int = 25,
@@ -185,16 +185,12 @@ def main():
     mcd = compute_mcd(tgt_paths[0], ref_paths[0],
             n_fft=1024,
             n_shift=256,
-            mcep_dim=None,
-            mcep_alpha=None,
         )
     print(f"MCD 1: {mcd:.3f}")
 
     mcd = compute_mcd(tgt_paths[1], ref_paths[1],
             n_fft=1024,
             n_shift=256,
-            mcep_dim=None,
-            mcep_alpha=None,
         )
     print(f"MCD 2: {mcd:.3f}")
 

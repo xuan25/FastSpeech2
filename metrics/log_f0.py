@@ -136,8 +136,8 @@ class LogF0BatchProcesser(Iterator):
 
     def __init__(
             self,
-            tgt_paths: str,
-            ref_paths: str,
+            tgt_paths: list[str],
+            ref_paths: list[str],
             f0min: int = 40,
             f0max: int= 800,
             n_fft: int = 1024,
@@ -191,22 +191,18 @@ def main():
     mcd = compute_log_f0(tgt_paths[0], ref_paths[0],
             n_fft=1024,
             n_shift=256,
-            mcep_dim=None,
-            mcep_alpha=None,
         )
     print(f"Log-F0 1: {mcd:.3f}")
 
     mcd = compute_log_f0(tgt_paths[1], ref_paths[1],
             n_fft=1024,
             n_shift=256,
-            mcep_dim=None,
-            mcep_alpha=None,
         )
     print(f"Log-F0 2: {mcd:.3f}")
 
     # batch computing MCD (default hyperparameters)
 
-    processer = MCDBatchProcesser(ref_paths, tgt_paths, num_threads=2)
+    processer = LogF0BatchProcesser(ref_paths, tgt_paths, num_threads=2)
 
     for tgt_path, mcd in tqdm.tqdm(
         zip(

@@ -1,6 +1,5 @@
 import os
 import json
-from typing import Union
 
 import torch
 import numpy as np
@@ -19,9 +18,10 @@ def get_model_train(model_config: ModelConfig,
               device, 
               train_optimizer_config: TrainOptimizerConfig,
               ckpt_path: str|None = None,
-              ) -> Union[FastSpeech2, ScheduledOptim, int]:
+              ) -> tuple[FastSpeech2, ScheduledOptim, int]:
 
     model = FastSpeech2(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
+    ckpt: dict = {}
     if ckpt_path:
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt["model"])
@@ -52,7 +52,8 @@ def get_model_infer(ckpt_path,
         model.load_state_dict(ckpt["model"])
 
     model.eval()
-    model.requires_grad_ = False
+    # model.requires_grad_ = False
+    model.requires_grad_(False)
     return model
 
 def get_param_num(model):
@@ -60,7 +61,7 @@ def get_param_num(model):
     return num_param
 
 
-def get_vocoder(vocoder_config: ModelVocoderConfig, device):
+def get_vocoder(vocoder_config: ModelVocoderConfig, device) -> object | hifigan.Generator:
     name = vocoder_config.model
     speaker = vocoder_config.speaker
 
@@ -75,14 +76,14 @@ def get_vocoder(vocoder_config: ModelVocoderConfig, device):
             )
         else:
             raise ValueError("Unknown MelGAN speaker: {}".format(speaker))
-        vocoder.mel2wav.eval()
-        vocoder.mel2wav.to(device)
+        vocoder.mel2wav.eval() # type: ignore
+        vocoder.mel2wav.to(device) # type: ignore
     elif name == "HiFi-GAN":
         hifigan_dir = os.path.dirname(hifigan.__file__)
-        with open(os.path.join(hifigan_dir, "config", "config.json"), "r") as f:
-            vocoder_config = json.load(f)
-        vocoder_config = hifigan.AttrDict(vocoder_config)
-        vocoder = hifigan.Generator(vocoder_config)
+        with open(os.path.join(hifigan_dir, "config", "config.json"), "r", encoding="utf-8") as f:
+            vocoder_attr = json.load(f)
+        vocoder_attr = hifigan.AttrDict(vocoder_attr)
+        vocoder = hifigan.Generator(vocoder_attr)
         if speaker == "LJSpeech":
             ckpt = torch.load(os.path.join(hifigan_dir, "ckpt", "generator_LJSpeech.pth.tar"))
         elif speaker == "universal":
@@ -93,6 +94,8 @@ def get_vocoder(vocoder_config: ModelVocoderConfig, device):
         vocoder.eval()
         vocoder.remove_weight_norm()
         vocoder.to(device)
+    else:
+        raise ValueError("Unknown vocoder: {}".format(name))
 
     return vocoder
 

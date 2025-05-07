@@ -4,32 +4,45 @@ import tqdm
 from metrics.log_f0 import LogF0BatchProcesser
 from metrics.mcd import MCDBatchProcesser
 
-REF_DIR = "FastSpeech2/raw_data/LibriTTS"
-# SYNTH_DIR = "synth_output_val_original"
-# OUTPUT_FILE = "val-mcd_original.csv"
-
-# REF_DIR = "data/augmented_data/LibriTTS-original/audio"
-
-# SYNTH_DIR = "synth_output_val/onehot_encoder"
-# OUTPUT_FILE = "metrics_output/onehot_encoder.csv"
-SYNTH_DIR = "synth_output_val/original"
-OUTPUT_FILE = "metrics_output/original.csv"
-
 def main():
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--ref_dir", 
+        # required=True, 
+        type=str, 
+        default="data/original/LibriTTS/wav"
+    )
+
+    parser.add_argument(
+        "--synth_dir", 
+        # required=True, 
+        type=str, 
+        default="output/default/synth_val"
+    )
+
+    parser.add_argument(
+        "--output_file", 
+        # required=True, 
+        type=str, 
+        default="output/default/metrics.csv"
+    )
+
+    args = parser.parse_args()
+
+    ref_dir = args.ref_dir
+    synth_dir = args.synth_dir
+    output_file = args.output_file
 
     # collecting tgt paths
 
     tgt_paths = []
 
-    for root, dirs, files in os.walk(SYNTH_DIR):
+    for root, dirs, files in os.walk(synth_dir):
         for file in files:
             if file.endswith(".wav"):
                 tgt_paths.append(os.path.join(root, file))
-
-
-    # QUICK PATCH to filter out augmented data
-    # 
-    tgt_paths = [path for path in tgt_paths if "_a_" not in path] 
 
     file_ids = [os.path.splitext(os.path.basename(path))[0] for path in tgt_paths]
 
@@ -37,7 +50,7 @@ def main():
 
     ref_paths_raw = []
 
-    for root, dirs, files in os.walk(REF_DIR):
+    for root, dirs, files in os.walk(ref_dir):
         for file in files:
             if file.endswith(".wav"):
                 ref_paths_raw.append(os.path.join(root, file))
@@ -55,7 +68,9 @@ def main():
     mcds = []
     log_f0s = []
 
-    with open(OUTPUT_FILE, "w") as f:
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    with open(output_file, "w", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["audio_name", "mcd", "log_f0"])
 
@@ -64,7 +79,7 @@ def main():
                 tgt_paths,
                 mcd_processer
             ),
-            desc="[computing]", dynamic_ncols=True, total=len(tgt_paths)):
+            desc="[computing MCD]", dynamic_ncols=True, total=len(tgt_paths)):
 
             mcds.append(mcd)
 
@@ -80,7 +95,7 @@ def main():
                 tgt_paths,
                 log_f0_processer
             ),
-            desc="[computing]", dynamic_ncols=True, total=len(tgt_paths)):
+            desc="[computing Log-F0]", dynamic_ncols=True, total=len(tgt_paths)):
 
             log_f0s.append(log_f0)
 

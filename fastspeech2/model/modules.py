@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 from fastspeech2.dataset.data_models import DatasetFeatureStats
 
-from ..config import DatasetFeaturePropertiesConfig, ModelVariancePredictorConfig
+from ..config import DatasetFeaturePropertiesConfig, ModelVarianceEmbeddingConfig, ModelVariancePredictorConfig
 
 from ..utils.tools import get_mask_from_lengths
 
@@ -42,7 +42,7 @@ def pad(input_ele, mel_max_length=None):
 class VarianceAdaptor(nn.Module):
     """Variance Adaptor"""
 
-    def __init__(self, input_size: int, variance_embedding_config: ModelVariancePredictorConfig, variance_predictor_config: ModelVariancePredictorConfig, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, dataset_feature_stats: DatasetFeatureStats):
+    def __init__(self, input_size: int, variance_embedding_config: ModelVarianceEmbeddingConfig, variance_predictor_config: ModelVariancePredictorConfig, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, dataset_feature_stats: DatasetFeatureStats):
         super(VarianceAdaptor, self).__init__()
         self.duration_predictor = VariancePredictor(input_size, variance_predictor_config)
         self.length_regulator = LengthRegulator()

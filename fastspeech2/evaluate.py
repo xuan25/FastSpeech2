@@ -17,7 +17,7 @@ def evaluate(model, step,
              vocoder_config: ModelVocoderConfig,
              stats: DatasetFeatureStats,
              feature_properties_config: DatasetFeaturePropertiesConfig, 
-             logger=None, vocoder=None, device="cpu"):
+             logger=None, vocoder=None, device: str | torch.device="cpu"):
 
     # Get dataset
     dataset = OriginalDatasetWithSentiment(
@@ -47,12 +47,14 @@ def evaluate(model, step,
         duration_loss=torch.tensor(0.0),
     )
     
+    batch_torch: DataBatchTorch|None = None
+    output: FastSpeech2Output|None = None
     for batch in loader:
         batch: DataBatch = batch
-        batch_torch: DataBatchTorch = batch.to_torch(device)
+        batch_torch = batch.to_torch(device)
         with torch.no_grad():
             # Forward
-            output: FastSpeech2Output = model(batch_torch)
+            output = model(batch_torch)
 
             # Cal Loss
             losses: FastSpeech2LossResult = loss_func(batch_torch, output)
@@ -87,34 +89,35 @@ def evaluate(model, step,
     )
 
     if logger is not None:
-        fig, wav_reconstruction, wav_prediction, tag = synth_one_sample(
-            batch_torch,
-            output,
-            vocoder,
-            vocoder_config,
-            stats,
-            feature_properties_config,
-        )
-
         log(logger, step, losses=loss_means)
-        log(
-            logger,
-            fig=fig,
-            tag="Validation/step_{}_{}".format(step, tag),
-        )
-        sampling_rate = feature_properties_config.sampling_rate
-        log(
-            logger,
-            audio=wav_reconstruction,
-            sampling_rate=sampling_rate,
-            tag="Validation/step_{}_{}_reconstructed".format(step, tag),
-        )
-        log(
-            logger,
-            audio=wav_prediction,
-            sampling_rate=sampling_rate,
-            tag="Validation/step_{}_{}_synthesized".format(step, tag),
-        )
+
+        if batch_torch is not None and output is not None:
+            fig, wav_reconstruction, wav_prediction, tag = synth_one_sample(
+                batch_torch,
+                output,
+                vocoder,
+                vocoder_config,
+                stats,
+                feature_properties_config,
+            )
+            log(
+                logger,
+                fig=fig,
+                tag="Validation/step_{}_{}".format(step, tag),
+            )
+            sampling_rate = feature_properties_config.sampling_rate
+            log(
+                logger,
+                audio=wav_reconstruction,
+                sampling_rate=sampling_rate,
+                tag="Validation/step_{}_{}_reconstructed".format(step, tag),
+            )
+            log(
+                logger,
+                audio=wav_prediction,
+                sampling_rate=sampling_rate,
+                tag="Validation/step_{}_{}_synthesized".format(step, tag),
+            )
 
     return message
 

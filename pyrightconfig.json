@@ -1,0 +1,17 @@
+{
+    "exclude": [
+        "node_modules",
+        "dist",
+        "build",
+        "coverage",
+        ".venv",
+        ".pytest_cache",
+        ".mypy_cache",
+        "__pycache__",
+        ".temp",
+        "data",
+        "outputs",
+        "config",
+        "lexicon",
+    ],
+}

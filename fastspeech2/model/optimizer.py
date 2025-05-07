@@ -9,7 +9,7 @@ class ScheduledOptim(Optimizer):
     """ A simple wrapper class for learning rate scheduling """
 
     def __init__(self, model: torch.nn.Module, train_optimizer_config: TrainOptimizerConfig, init_lr, current_step):
-
+        super(ScheduledOptim, self).__init__(model.parameters(), {})
         self._optimizer = torch.optim.Adam(
             model.parameters(),
             betas=train_optimizer_config.betas,
@@ -26,8 +26,8 @@ class ScheduledOptim(Optimizer):
         self._update_learning_rate()
         self._optimizer.step()
 
-    def zero_grad(self):
-        self._optimizer.zero_grad()
+    def zero_grad(self, set_to_none: bool = True):
+        self._optimizer.zero_grad(set_to_none)
 
     def _get_lr_scale(self):
         lr = np.min(

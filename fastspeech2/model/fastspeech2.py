@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from ..config import DatasetFeaturePropertiesConfig, ModelConfig, ModelGlobalConfig, ModelTransformerConfig
 
 
-from ..dataset.data_models import DataBatch, DatasetFeatureStats
+from ..dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from ..transformer import Encoder, Decoder, PostNet
 from .modules import VarianceAdaptor
 from ..utils.tools import get_mask_from_lengths
@@ -49,7 +49,7 @@ class FastSpeech2(nn.Module):
 
     def forward(
         self,
-        batch: DataBatch,
+        batch: DataBatchTorch,
         p_control: float = 1.0,
         e_control: float = 1.0,
         d_control: float = 1.0,
