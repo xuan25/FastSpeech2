@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 
 import torch
@@ -63,11 +64,28 @@ def main():
         dataset_config.path_config.speaker_map_file,
     )
 
+    git_revision = None
+    try:
+        from .utils.git import get_git_revision_hash
+        git_revision = get_git_revision_hash()
+    except RuntimeError:
+        print("Git repository not found. Skipping git revision logging.")
+
+    # dump configs to output directory
+    os.makedirs(output_dir, exist_ok=True)
+    config = {
+        "dataset": dataset_config.to_dict(),
+        "model": model_config.to_dict(),
+        "train": train_config.to_dict(),
+        "git_revision": git_revision,
+    }
+    with open(os.path.join(output_dir, "config.json"), "w", encoding="utf-8") as f:
+        f.write(json.dumps(config, indent=4))
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
     print("Prepare training ...")
-
 
     # Get dataset
     dataset = OriginalDatasetWithSentiment(
