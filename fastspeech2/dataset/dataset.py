@@ -233,13 +233,22 @@ def main():
     
     from torch.utils.data import DataLoader
 
-    import test
-
-    dataset_config, _, _ = test.get_test_configs()
+    dataset_path_config=DatasetPathConfig(
+        base_dir="config/LibriTTS",
+        meta_file_train="../../data/augmented_data/LibriTTS-original/train.txt",
+        meta_file_val="../../data/augmented_data/LibriTTS-original/val.txt",
+        speaker_map_file="../../data/augmented_data/LibriTTS-original/speakers.json",
+        feature_dir="../../data/augmented_data/LibriTTS-original",
+        stats_file="../../data/augmented_data/LibriTTS-original/stats.json",
+        sentiment_file="../../data/original/LibriTTS/sentiment_scores_libri-tts.csv",
+    )
+    dataset_preprocessing_config=DatasetPreprocessingConfig(
+        text_cleaners=["english_cleaners"],
+    )
 
     dataset = OriginalDatasetWithSentiment(
-        dataset_path_config=dataset_config.path_config,
-        dataset_preprocessing_config=dataset_config.preprocessing_config,
+        dataset_path_config=dataset_path_config,
+        dataset_preprocessing_config=dataset_preprocessing_config,
         split=DatasetSplit.VAL,
         sort=True
     )
