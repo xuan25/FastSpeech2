@@ -41,9 +41,15 @@ class FastSpeech2(nn.Module):
 
         self.speaker_emb = None
         if model_config.global_config.multi_speaker:
-            n_speaker = dataset_feature_stats.n_speakers
             self.speaker_emb = nn.Embedding(
-                n_speaker,
+                dataset_feature_stats.n_speakers,
+                model_config.transformer_config.encoder_hidden,
+            )
+
+        self.sentiment_emb = None
+        if model_config.global_config.use_sentiment:
+            self.sentiment_emb = nn.Embedding(
+                dataset_feature_properties_config.num_sentiments,
                 model_config.transformer_config.encoder_hidden,
             )
 
@@ -65,6 +71,11 @@ class FastSpeech2(nn.Module):
 
         if self.speaker_emb is not None:
             output = output + self.speaker_emb(batch.speakers).unsqueeze(1).expand(
+                -1, batch.text_len_max, -1
+            )
+
+        if self.sentiment_emb is not None:
+            output = output + self.sentiment_emb(batch.speakers).unsqueeze(1).expand(
                 -1, batch.text_len_max, -1
             )
 
