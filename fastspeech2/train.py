@@ -142,12 +142,12 @@ def main():
     synth_step = train_config.step_config.synth_step
     val_step = train_config.step_config.val_step
 
-    total_step_bar = tqdm(total=total_step, desc="Training", position=0)
+    total_step_bar = tqdm(total=total_step, desc="Training", position=0, dynamic_ncols=True)
     total_step_bar.n = training_steps
     total_step_bar.update()
 
     while True:
-        epoch_bar = tqdm(total=len(loader), desc="Epoch {}".format(epoch), position=1)
+        epoch_bar = tqdm(total=len(loader), desc="Epoch {}".format(epoch), position=1, dynamic_ncols=True)
         for batch in loader:
 
             batch: DataBatch = batch
