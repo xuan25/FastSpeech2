@@ -75,7 +75,7 @@ class FastSpeech2(nn.Module):
             )
 
         if self.sentiment_emb is not None:
-            output = output + self.sentiment_emb(batch.speakers).unsqueeze(1).expand(
+            output = output + self.sentiment_emb(batch.sentiments).unsqueeze(1).expand(
                 -1, batch.text_len_max, -1
             )
 
