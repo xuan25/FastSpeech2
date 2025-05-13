@@ -90,6 +90,12 @@ def main():
         default=1.0,
         help="control the speed of the whole utterance, larger value for slower speaking rate",
     )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=16,
+        help="batch size for synthesis",
+    )
     args = parser.parse_args()
 
     ckpt_path = args.ckpt_path
@@ -99,6 +105,8 @@ def main():
     model_config = ModelConfig.load_from_yaml(args.model_config)
     data_split_str = args.data_split
     data_split = DatasetSplit[data_split_str.upper()]
+
+    batch_size = args.batch_size
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -122,7 +130,7 @@ def main():
 
     batchs = DataLoader(
         dataset,
-        batch_size=32,
+        batch_size=batch_size,
         num_workers=16,
         collate_fn=dataset.collate_fn,
     )
