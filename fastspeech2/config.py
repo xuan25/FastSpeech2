@@ -56,24 +56,29 @@ class DatasetPathConfig:
 class DatasetPreprocessingConfig:
     def __init__(
         self,
-        text_cleaners: list
+        lexicon_path: str,
+        text_cleaners: list,
     ):
+        self.lexicon_path = lexicon_path
         self.text_cleaners = text_cleaners
     
     def __repr__(self):
         return (
             "DatasetPreprocessingConfig( \n"
+            f"    lexicon_path={self.lexicon_path}, \n"
             f"    text_cleaners={self.text_cleaners})"
         )
 
     def to_dict(self):
         return {
+            "lexicon_path": self.lexicon_path,
             "text_cleaners": self.text_cleaners
         }
 
     @classmethod
     def from_dict(cls, config_dict: dict):
         return cls(
+            lexicon_path=config_dict['lexicon_path'],
             text_cleaners=config_dict['text_cleaners']
         )
 

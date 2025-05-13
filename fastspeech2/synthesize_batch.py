@@ -66,6 +66,13 @@ def main():
         default="config/LibriTTS/model.yaml",
     )
     parser.add_argument(
+        "--data_split",
+        type=str,
+        default="val",
+        choices=["train", "val"],
+        help="data split to use for synthesis",
+    )
+    parser.add_argument(
         "--pitch_control",
         type=float,
         default=1.0,
@@ -90,6 +97,8 @@ def main():
     control_values = args.pitch_control, args.energy_control, args.duration_control
     dataset_config = DatasetConfig.load_from_yaml(args.dataset_config)
     model_config = ModelConfig.load_from_yaml(args.model_config)
+    data_split_str = args.data_split
+    data_split = DatasetSplit[data_split_str.upper()]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -108,7 +117,7 @@ def main():
     dataset = TextOnlyDatasetWithSentiment(
         dataset_config.path_config,
         dataset_config.preprocessing_config,
-        DatasetSplit.VAL
+        data_split
     )
 
     batchs = DataLoader(
@@ -117,8 +126,6 @@ def main():
         num_workers=16,
         collate_fn=dataset.collate_fn,
     )
-
-    output_dir = "output/synth_val"
 
     os.makedirs(output_dir, exist_ok=True)
     synthesize(model, vocoder, model_config.vocoder_config, dataset_config.feature_properties_config, batchs, control_values, device, dataset_feature_stats, output_dir)
