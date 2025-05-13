@@ -72,7 +72,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def log(
-    logger, step=None, losses: FastSpeech2LossResult=None, fig=None, audio=None, sampling_rate=22050, tag=""
+    logger, step=None, losses: FastSpeech2LossResult | None=None, fig=None, audio=None, sampling_rate=22050, tag=""
 ):
     if losses is not None:
         logger.add_scalar("Loss/total_loss", losses.total_loss, step)
@@ -112,6 +112,11 @@ def expand(values, durations):
 
 
 def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, vocoder_config: ModelVocoderConfig, stats: DatasetFeatureStats, feature_properties_config: DatasetFeaturePropertiesConfig):
+
+    assert targets.mels is not None, "targets.mels is None"
+    assert targets.durations is not None, "targets.durations is None"
+    assert targets.pitches is not None, "targets.pitches is None"
+    assert targets.energies is not None, "targets.energies is None"
 
     basename = targets.data_ids[0]
     src_len = predictions.text_lens[0].item()
@@ -185,7 +190,7 @@ def synth_samples(targets: DataBatchTorch, predictions: FastSpeech2Output, vocod
             stats,
             ["Synthetized Spectrogram"],
         )
-        plt.savefig(os.path.join(output_dir, "{}.png".format(basename)))
+        plt.savefig(os.path.join(output_dir, "{}.pdf".format(basename)))
         plt.close()
 
     from .model import vocoder_infer
