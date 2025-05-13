@@ -234,15 +234,16 @@ def main():
     from torch.utils.data import DataLoader
 
     dataset_path_config=DatasetPathConfig(
-        base_dir="config/LibriTTS",
-        meta_file_train="../../data/augmented_data/LibriTTS-original/train.txt",
-        meta_file_val="../../data/augmented_data/LibriTTS-original/val.txt",
-        speaker_map_file="../../data/augmented_data/LibriTTS-original/speakers.json",
-        feature_dir="../../data/augmented_data/LibriTTS-original",
-        stats_file="../../data/augmented_data/LibriTTS-original/stats.json",
-        sentiment_file="../../data/original/LibriTTS/sentiment_scores_libri-tts.csv",
+        base_dir="../../config/LibriTTS",
+        meta_file_train="../data/LibriTTS/train.txt",
+        meta_file_val="../data/LibriTTS/val.txt",
+        speaker_map_file="../data/LibriTTS/speakers.json",
+        feature_dir="../data/LibriTTS",
+        stats_file="../data/LibriTTS/stats.json",
+        sentiment_file="../data/LibriTTS/sentiment_scores.csv",
     )
     dataset_preprocessing_config=DatasetPreprocessingConfig(
+        lexicon_path="../../lexicon/librispeech-lexicon.txt",
         text_cleaners=["english_cleaners"],
     )
 
@@ -258,7 +259,7 @@ def main():
         # print(sample)
         print(f"Speaker: {sample.speaker}, Text: {sample.text.shape}, Sentiment: {sample.sentiment}")
         print(f"Raw Text: {sample.raw_text}")
-        print(f"Mel shape: {sample.mel.shape}, Pitch shape: {sample.pitch.shape}, Energy shape: {sample.energy.shape}, Duration shape: {sample.duration.shape}")
+        print(f"Mel shape: {sample.mel.shape}, Pitch shape: {sample.pitch.shape}, Energy shape: {sample.energy.shape}, Duration shape: {sample.duration.shape}") # type: ignore
         print("-" * 50)
 
 
@@ -273,7 +274,7 @@ def main():
             # print(sample)
             print(f"Speaker: {sample.speaker}, Text: {sample.text.shape}, Sentiment: {sample.sentiment}")
             print(f"Raw Text: {sample.raw_text}")
-            print(f"Mel shape: {sample.mel.shape}, Pitch shape: {sample.pitch.shape}, Energy shape: {sample.energy.shape}, Duration shape: {sample.duration.shape}")
+            print(f"Mel shape: {sample.mel.shape}, Pitch shape: {sample.pitch.shape}, Energy shape: {sample.energy.shape}, Duration shape: {sample.duration.shape}") # type: ignore
             print("-" * 50)
 
         break
