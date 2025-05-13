@@ -1,9 +1,9 @@
 path:
-  meta_file_train: "../../data/augmented_data/LibriTTS-original/train.txt"
-  meta_file_val: "../../data/augmented_data/LibriTTS-original/val.txt"
-  speaker_map_file: "../../data/augmented_data/LibriTTS-original/speakers.json"
-  feature_dir: "../../data/augmented_data/LibriTTS-original"
-  stats_file: "../../data/augmented_data/LibriTTS-original/stats.json"
+  meta_file_train: "../../data/LibriTTS/train.txt"
+  meta_file_val: "../../data/LibriTTS/val.txt"
+  speaker_map_file: "../../data/LibriTTS/speakers.json"
+  feature_dir: "../../data/LibriTTS"
+  stats_file: "../../data/LibriTTS/stats.json"
   sentiment_file: null
 
 properties:
@@ -16,4 +16,5 @@ properties:
   num_sentiments: 0
 
 preprocessing:
+  lexicon_path: "../../lexicon/librispeech-lexicon.txt"
   text_cleaners: ["english_cleaners"]

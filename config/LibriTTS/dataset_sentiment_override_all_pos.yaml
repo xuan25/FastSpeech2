@@ -4,7 +4,7 @@ path:
   speaker_map_file: "../../data/LibriTTS/speakers.json"
   feature_dir: "../../data/LibriTTS"
   stats_file: "../../data/LibriTTS/stats.json"
-  sentiment_file: "./overrides/sentiment_scores_override_all_neu.csv"
+  sentiment_file: "./overrides/sentiment_scores_override_all_pos.csv"
 
 properties:
   pitch_feature_level: "phoneme_level" # support 'phoneme_level' or 'frame_level'
@@ -16,5 +16,4 @@ properties:
   num_sentiments: 3
 
 preprocessing:
-  lexicon_path: "../../lexicon/librispeech-lexicon.txt"
   text_cleaners: ["english_cleaners"]
