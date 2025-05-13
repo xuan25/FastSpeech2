@@ -68,6 +68,12 @@ class DataBatch:
         else:
             sample_idxs: list[int] = np.arange(self.batch_size).tolist()
 
+        self.text_lens: npt.NDArray[np.intp] = np.array([data_sample.text.shape[0] for data_sample in data_samples])
+        self.mel_lens: npt.NDArray[np.intp] | None = np.array([data_sample.mel.shape[0] for data_sample in data_samples]) if data_samples[0].mel is not None else None # type: ignore
+
+        self.text_len_max: int = max(self.text_lens)
+        self.mel_len_max: int | None = max(self.mel_lens) if self.mel_lens is not None else None
+
         self.data_ids = [data_samples[idx].data_id for idx in sample_idxs]
         self.speakers: npt.NDArray[np.intp] = np.array([data_samples[idx].speaker for idx in sample_idxs])
         self.texts: npt.NDArray[np.intp] = pad_1D([data_samples[idx].text for idx in sample_idxs])
@@ -77,12 +83,6 @@ class DataBatch:
         self.energies: npt.NDArray[np.float_] | None = pad_1D([data_samples[idx].energy for idx in sample_idxs]) if data_samples[0].energy is not None else None
         self.durations: npt.NDArray[np.float_] | None = pad_1D([data_samples[idx].duration for idx in sample_idxs]) if data_samples[0].duration is not None else None
         self.sentiments: npt.NDArray[np.intp] | None = np.array([data_samples[idx].sentiment for idx in sample_idxs]) if data_samples[0].sentiment is not None else None
-
-        self.text_lens: npt.NDArray[np.intp] = np.array([text.shape[0] for text in self.texts])
-        self.mel_lens: npt.NDArray[np.intp] | None = np.array([mel.shape[0] for mel in self.mels]) if self.mels is not None else None
-
-        self.text_len_max: int = max(self.text_lens)
-        self.mel_len_max: int | None = max(self.mel_lens) if self.mel_lens is not None else None
 
     def __repr__(self):
         return f"DataBatch(data_ids={self.data_ids}, speakers={self.speakers}, texts={self.texts}, raw_texts={self.raw_texts}, mels={self.mels}, pitches={self.pitches}, energies={self.energies}, durations={self.durations})"
