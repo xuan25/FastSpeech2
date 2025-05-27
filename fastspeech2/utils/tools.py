@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from ..config import DatasetFeaturePropertiesConfig, ModelVocoderConfig
 
 from ..dataset.data_models import DataBatchTorch, DatasetFeatureStats
-from ..model.data_models import FastSpeech2Output, FastSpeech2LossResult
+from ..model.data_models import FastSpeech2Output, FastSpeech2LossResult, ProsodyPredictorLossResult
 
 
 matplotlib.use("Agg")
@@ -92,6 +92,14 @@ def log(
             sample_rate=sampling_rate,
         )
 
+def log_prosody_predictor(
+    logger, step=None, losses: ProsodyPredictorLossResult | None=None
+):
+    if losses is not None:
+        logger.add_scalar("Loss/total_loss", losses.total_loss, step)
+        logger.add_scalar("Loss/pitch_loss", losses.pitch_loss, step)
+        logger.add_scalar("Loss/energy_loss", losses.energy_loss, step)
+        logger.add_scalar("Loss/duration_loss", losses.duration_loss, step)
 
 def get_mask_from_lengths(lengths, max_len=None):
     batch_size = lengths.shape[0]
