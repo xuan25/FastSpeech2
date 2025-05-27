@@ -68,8 +68,8 @@ class DataBatch:
         else:
             sample_idxs: list[int] = np.arange(self.batch_size).tolist()
 
-        self.text_lens: npt.NDArray[np.intp] = np.array([data_sample.text.shape[0] for data_sample in data_samples])
-        self.mel_lens: npt.NDArray[np.intp] | None = np.array([data_sample.mel.shape[0] for data_sample in data_samples]) if data_samples[0].mel is not None else None # type: ignore
+        self.text_lens: npt.NDArray[np.intp] = np.array([data_samples[idx].text.shape[0] for idx in sample_idxs])
+        self.mel_lens: npt.NDArray[np.intp] | None = np.array([data_samples[idx].mel.shape[0] for idx in sample_idxs]) if data_samples[0].mel is not None else None # type: ignore
 
         self.text_len_max: int = max(self.text_lens)
         self.mel_len_max: int | None = max(self.mel_lens) if self.mel_lens is not None else None
