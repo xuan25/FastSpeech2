@@ -16,4 +16,5 @@ properties:
   num_sentiments: 3
 
 preprocessing:
+  lexicon_path: "../../lexicon/librispeech-lexicon.txt"
   text_cleaners: ["english_cleaners"]
