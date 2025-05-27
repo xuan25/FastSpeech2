@@ -1,33 +1,44 @@
+from typing import Any, Dict, Iterable, TypeAlias, Union
 import torch
 import numpy as np
-from torch.optim import Optimizer
+# from torch.optim import ParamsT
 
 from ..config import TrainOptimizerConfig
 
+ParamsT: TypeAlias = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
 
-class ScheduledOptim(Optimizer):
+class ScheduledOptim(torch.optim.Adam):
     """ A simple wrapper class for learning rate scheduling """
 
-    def __init__(self, model: torch.nn.Module, train_optimizer_config: TrainOptimizerConfig, init_lr, current_step):
-        super(ScheduledOptim, self).__init__(model.parameters(), {})
-        self._optimizer = torch.optim.Adam(
-            model.parameters(),
-            betas=train_optimizer_config.betas,
-            eps=train_optimizer_config.eps,
-            weight_decay=train_optimizer_config.weight_decay,
-        )
+    def __init__(self, params: ParamsT, train_optimizer_config: TrainOptimizerConfig, init_lr, current_step):
         self.n_warmup_steps = train_optimizer_config.warm_up_step
         self.anneal_steps = train_optimizer_config.anneal_steps
         self.anneal_rate = train_optimizer_config.anneal_rate
         self.current_step = current_step if current_step else 0
         self.init_lr = init_lr
 
-    def step_and_update_lr(self):
+        super().__init__(
+            params,
+            betas=train_optimizer_config.betas,
+            eps=train_optimizer_config.eps,
+            weight_decay=train_optimizer_config.weight_decay)
+
+    def state_dict(self) -> Dict[str, Any]:
+        state = super().state_dict()
+        state['n_warmup_steps'] = self.n_warmup_steps
+        state['anneal_steps'] = self.anneal_steps
+        state['anneal_rate'] = self.anneal_rate
+        state['current_step'] = self.current_step
+        state['init_lr'] = self.init_lr
+        
+        return state
+
+    def step(self, closure=None):
         self._update_learning_rate()
-        self._optimizer.step()
+        return super().step(closure)
 
     def zero_grad(self, set_to_none: bool = True):
-        self._optimizer.zero_grad(set_to_none)
+        super().zero_grad(set_to_none)
 
     def _get_lr_scale(self):
         lr = np.min(
@@ -46,7 +57,7 @@ class ScheduledOptim(Optimizer):
         self.current_step += 1
         lr = self.init_lr * self._get_lr_scale()
 
-        for param_group in self._optimizer.param_groups:
+        for param_group in self.param_groups:
             param_group["lr"] = lr
 
 # if __name__ == "__main__":

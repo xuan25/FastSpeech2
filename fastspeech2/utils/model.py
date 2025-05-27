@@ -28,7 +28,7 @@ def get_model_train(model_config: ModelConfig,
 
     init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
     scheduled_optim = ScheduledOptim(
-        model, train_optimizer_config, init_lr, 0
+        model.parameters(), train_optimizer_config, init_lr, 0
     )
     if ckpt_path:
         scheduled_optim.load_state_dict(ckpt["optimizer"])

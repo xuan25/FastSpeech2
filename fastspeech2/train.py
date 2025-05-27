@@ -169,7 +169,7 @@ def main():
 
                 # Update weights
                 optimizer: ScheduledOptim = optimizer
-                optimizer.step_and_update_lr()
+                optimizer.step()
                 optimizer.zero_grad()
 
             if step % log_step == 0:
@@ -241,7 +241,7 @@ def main():
                 torch.save(
                     {
                         "model": model.module.state_dict(),
-                        "optimizer": optimizer._optimizer.state_dict(),
+                        "optimizer": optimizer.state_dict(),
                         "training_stats":
                         {
                             "steps": step,
