@@ -515,6 +515,7 @@ class TrainStepConfig:
 class TrainOptimizerConfig:
     def __init__(
         self,
+        init_lr: float,
         betas: tuple[float, float],
         eps: float,
         weight_decay: float,
@@ -525,6 +526,7 @@ class TrainOptimizerConfig:
         anneal_rate: float
     ):
         # self.batch_size = batch_size
+        self.init_lr = init_lr
         self.betas = betas
         self.eps = eps
         self.weight_decay = weight_decay
@@ -537,6 +539,7 @@ class TrainOptimizerConfig:
     def __repr__(self):
         return (
             "TrainOptimizerConfig( \n"
+            f"    init_lr={self.init_lr}, \n"
             f"    betas={self.betas}, \n"
             f"    eps={self.eps}, \n"
             f"    weight_decay={self.weight_decay}, \n"
@@ -549,6 +552,7 @@ class TrainOptimizerConfig:
     
     def to_dict(self):
         return {
+            "init_lr": self.init_lr,
             "betas": self.betas,
             "eps": self.eps,
             "weight_decay": self.weight_decay,
@@ -562,6 +566,7 @@ class TrainOptimizerConfig:
     @classmethod
     def from_dict(cls, config_dict: dict):
         return cls(
+            init_lr=config_dict['init_lr'],
             betas=config_dict['betas'],
             eps=config_dict['eps'],
             weight_decay=config_dict['weight_decay'],

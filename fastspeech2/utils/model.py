@@ -9,36 +9,7 @@ from ..dataset.data_models import DatasetFeatureStats
 from ..config import DatasetFeaturePropertiesConfig, ModelConfig, ModelVocoderConfig, TrainOptimizerConfig
 
 from .. import hifigan
-from ..model import FastSpeech2, ScheduledOptim
-
-
-def get_model_train(model_config: ModelConfig,
-              dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
-              dataset_feature_stats: DatasetFeatureStats,
-              device, 
-              train_optimizer_config: TrainOptimizerConfig,
-              ckpt_path: str|None = None,
-              ) -> tuple[FastSpeech2, ScheduledOptim, int]:
-
-    model = FastSpeech2(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
-    ckpt: dict = {}
-    if ckpt_path:
-        ckpt = torch.load(ckpt_path)
-        model.load_state_dict(ckpt["model"])
-
-    init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
-    scheduled_optim = ScheduledOptim(
-        model.parameters(), train_optimizer_config, init_lr, 0
-    )
-    if ckpt_path:
-        scheduled_optim.load_state_dict(ckpt["optimizer"])
-    model.train()
-
-    training_steps = 0
-    if ckpt_path:
-        training_steps = ckpt["training_stats"]["steps"]
-
-    return model, scheduled_optim, training_steps
+from ..model import FastSpeech2
 
 def get_model_infer(ckpt_path, 
               model_config: ModelConfig,

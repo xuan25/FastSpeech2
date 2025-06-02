@@ -8,17 +8,47 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
 
-from .config import DatasetConfig, ModelConfig, TrainConfig
+from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, TrainConfig, TrainOptimizerConfig
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from .model.fastspeech2 import FastSpeech2, FastSpeech2Output
 from .model.loss import FastSpeech2LossResult
 from .model.optimizer import ScheduledOptim
-from .utils.model import get_model_train, get_vocoder, get_param_num
+from .utils.model import get_vocoder, get_param_num
 from .utils.tools import log, synth_one_sample
 from .model import FastSpeech2Loss
 from .dataset.dataset import DatasetSplit, OriginalDatasetWithSentiment
 
 from .evaluate import evaluate
+
+
+def get_model_train(model_config: ModelConfig,
+              dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
+              dataset_feature_stats: DatasetFeatureStats,
+              device, 
+              train_optimizer_config: TrainOptimizerConfig,
+              ckpt_path: str|None = None,
+              ) -> tuple[FastSpeech2, ScheduledOptim, int]:
+
+    model = FastSpeech2(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
+    ckpt: dict = {}
+    if ckpt_path:
+        ckpt = torch.load(ckpt_path)
+        model.load_state_dict(ckpt["model"])
+
+    # init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
+    scheduled_optim = ScheduledOptim(
+        model.parameters(), train_optimizer_config, 0
+    )
+    if ckpt_path:
+        scheduled_optim.load_state_dict(ckpt["optimizer"])
+    model.train()
+
+    training_steps = 0
+    if ckpt_path:
+        training_steps = ckpt["training_stats"]["steps"]
+
+    return model, scheduled_optim, training_steps
+
 
 def main():
     parser = argparse.ArgumentParser()

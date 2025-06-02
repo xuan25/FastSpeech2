@@ -36,9 +36,9 @@ def get_model_train(model_config: ModelConfig,
         ckpt = torch.load(ckpt_path)
         model.load_state_dict(ckpt["model"])
 
-    init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
+    # init_lr = np.power(model_config.transformer_config.encoder_hidden, -0.5)
     scheduled_optim = ScheduledOptim(
-        model.parameters(), train_optimizer_config, init_lr, 0
+        model.parameters(), train_optimizer_config, 0
     )
     if ckpt_path:
         scheduled_optim.load_state_dict(ckpt["optimizer"])

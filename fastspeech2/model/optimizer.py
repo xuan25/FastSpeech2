@@ -10,12 +10,12 @@ ParamsT: TypeAlias = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
 class ScheduledOptim(torch.optim.Adam):
     """ A simple wrapper class for learning rate scheduling """
 
-    def __init__(self, params: ParamsT, train_optimizer_config: TrainOptimizerConfig, init_lr, current_step):
+    def __init__(self, params: ParamsT, train_optimizer_config: TrainOptimizerConfig, current_step):
         self.n_warmup_steps = train_optimizer_config.warm_up_step
         self.anneal_steps = train_optimizer_config.anneal_steps
         self.anneal_rate = train_optimizer_config.anneal_rate
         self.current_step = current_step if current_step else 0
-        self.init_lr = init_lr
+        self.init_lr = train_optimizer_config.init_lr
 
         super().__init__(
             params,
