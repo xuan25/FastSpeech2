@@ -25,13 +25,20 @@ class FastSpeech2(nn.Module):
         super(FastSpeech2, self).__init__()
         self.model_config = model_config
 
-        self.encoder = Encoder(model_config.transformer_config, model_config.global_config.max_seq_len)
+        assert model_config.global_config.sentiment_mode in ["input", "after_encoder", "before_prosodic_predictors", None]
+
+        self.encoder = Encoder(
+            model_config.transformer_config, 
+            model_config.global_config.max_seq_len,
+            model_config.global_config.sentiment_mode,
+            dataset_feature_properties_config.num_sentiments if model_config.global_config.sentiment_mode == "input" else None)
         self.variance_adaptor = VarianceAdaptor(
             model_config.transformer_config.encoder_hidden, 
             model_config.variance_embedding_config,
             model_config.variance_predictor_config,
             dataset_feature_properties_config,
-            dataset_feature_stats)
+            dataset_feature_stats,
+            model_config.global_config.sentiment_mode)
         self.decoder = Decoder(model_config.transformer_config, model_config.global_config.max_seq_len)
         self.mel_linear = nn.Linear(
             model_config.transformer_config.decoder_hidden,
@@ -46,9 +53,9 @@ class FastSpeech2(nn.Module):
                 model_config.transformer_config.encoder_hidden,
             )
 
-        self.sentiment_emb = None
-        if model_config.global_config.use_sentiment:
-            self.sentiment_emb = nn.Embedding(
+        self.sentiment_emb_after_encoder = None
+        if model_config.global_config.sentiment_mode == "after_encoder":
+            self.sentiment_emb_after_encoder = nn.Embedding(
                 dataset_feature_properties_config.num_sentiments,
                 model_config.transformer_config.encoder_hidden,
             )
@@ -74,8 +81,8 @@ class FastSpeech2(nn.Module):
                 -1, batch.text_len_max, -1
             )
 
-        if self.sentiment_emb is not None:
-            output = output + self.sentiment_emb(batch.sentiments).unsqueeze(1).expand(
+        if self.sentiment_emb_after_encoder is not None:
+            output = output + self.sentiment_emb_after_encoder(batch.sentiments).unsqueeze(1).expand(
                 -1, batch.text_len_max, -1
             )
 
@@ -98,6 +105,7 @@ class FastSpeech2(nn.Module):
             p_control,
             e_control,
             d_control,
+            batch.sentiments if self.sentiment_emb_after_encoder is not None else None,
         )
 
         output, mel_masks = self.decoder(output, mel_masks)

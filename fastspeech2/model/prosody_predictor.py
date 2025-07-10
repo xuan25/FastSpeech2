@@ -21,13 +21,21 @@ class ProsodyPredictor(nn.Module):
         super(ProsodyPredictor, self).__init__()
         self.model_config = model_config
 
-        self.encoder = Encoder(model_config.transformer_config, model_config.global_config.max_seq_len)
+        assert model_config.global_config.sentiment_mode in ["input", "after_encoder", "before_prosodic_predictors", None], \
+            f"Invalid sentiment mode: {model_config.global_config.sentiment_mode}. Expected one of ['input', 'after_encoder', 'before_prosodic_predictors', None]."
+
+        self.encoder = Encoder(
+            model_config.transformer_config,
+            model_config.global_config.max_seq_len, 
+            model_config.global_config.sentiment_mode,
+            dataset_feature_properties_config.num_sentiments if model_config.global_config.sentiment_mode == "input" else None)
         self.variance_adaptor = VarianceAdaptor(
             model_config.transformer_config.encoder_hidden, 
             model_config.variance_embedding_config,
             model_config.variance_predictor_config,
             dataset_feature_properties_config,
-            dataset_feature_stats)
+            dataset_feature_stats,
+            model_config.global_config.sentiment_mode)
 
         self.speaker_emb = None
         if model_config.global_config.multi_speaker:
@@ -36,9 +44,9 @@ class ProsodyPredictor(nn.Module):
                 model_config.transformer_config.encoder_hidden,
             )
 
-        self.sentiment_emb = None
-        if model_config.global_config.use_sentiment:
-            self.sentiment_emb = nn.Embedding(
+        self.sentiment_emb_after_encoder = None
+        if model_config.global_config.sentiment_mode == "after_encoder":
+            self.sentiment_emb_after_encoder = nn.Embedding(
                 dataset_feature_properties_config.num_sentiments,
                 model_config.transformer_config.encoder_hidden,
             )
@@ -57,17 +65,18 @@ class ProsodyPredictor(nn.Module):
             else None
         )
 
-        output = self.encoder(batch.texts, text_masks)
+        output = self.encoder(batch.texts, text_masks, batch.sentiments)
 
         if self.speaker_emb is not None:
             output = output + self.speaker_emb(batch.speakers).unsqueeze(1).expand(
                 -1, batch.text_len_max, -1
             )
 
-        if self.sentiment_emb is not None:
-            output = output + self.sentiment_emb(batch.sentiments).unsqueeze(1).expand(
+        if self.sentiment_emb_after_encoder is not None:
+            sentiment_embedded = self.sentiment_emb_after_encoder(batch.sentiments).unsqueeze(1).expand(
                 -1, batch.text_len_max, -1
             )
+            output = output + sentiment_embedded
 
         (
             output,
@@ -88,6 +97,7 @@ class ProsodyPredictor(nn.Module):
             p_control,
             e_control,
             d_control,
+            batch.sentiments,
         )
 
         output = ProsodyPredictorOutput(

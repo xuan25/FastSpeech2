@@ -9,7 +9,7 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 
-from fastspeech2.dataset.data_models import DatasetFeatureStats
+from ..dataset.data_models import DatasetFeatureStats
 
 from ..config import DatasetFeaturePropertiesConfig, ModelVarianceEmbeddingConfig, ModelVariancePredictorConfig
 
@@ -42,7 +42,7 @@ def pad(input_ele, mel_max_length=None):
 class VarianceAdaptor(nn.Module):
     """Variance Adaptor"""
 
-    def __init__(self, input_size: int, variance_embedding_config: ModelVarianceEmbeddingConfig, variance_predictor_config: ModelVariancePredictorConfig, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, dataset_feature_stats: DatasetFeatureStats):
+    def __init__(self, input_size: int, variance_embedding_config: ModelVarianceEmbeddingConfig, variance_predictor_config: ModelVariancePredictorConfig, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, dataset_feature_stats: DatasetFeatureStats, sentient_mode: str | None):
         super(VarianceAdaptor, self).__init__()
         self.duration_predictor = VariancePredictor(input_size, variance_predictor_config)
         self.length_regulator = LengthRegulator()
@@ -101,6 +101,12 @@ class VarianceAdaptor(nn.Module):
         self.energy_embedding = nn.Embedding(
             n_bins, input_size
         )
+        
+        self.sentiment_embedding_before_prosodic_predictor = None
+        if sentient_mode == "before_prosodic_predictors":
+            self.sentiment_embedding_before_prosodic_predictor = nn.Embedding(
+                dataset_feature_properties_config.num_sentiments, input_size
+            )
 
     def get_pitch_embedding(self, x, target, mask, control):
         prediction = self.pitch_predictor(x, mask)
@@ -136,6 +142,7 @@ class VarianceAdaptor(nn.Module):
         p_control=1.0,
         e_control=1.0,
         d_control=1.0,
+        sentiments=None,
     ):
 
         assert self.pitch_feature_level in ["phoneme_level", "frame_level"], "pitch_feature_level should be phoneme_level or frame_level"
@@ -144,20 +151,24 @@ class VarianceAdaptor(nn.Module):
         pitch_prediction = None
         energy_prediction = None
 
+        sentiment_embedded = self.sentiment_embedding_before_prosodic_predictor(sentiments).unsqueeze(1).expand(
+                -1, src_mask.shape[1], -1
+            ) if self.sentiment_embedding_before_prosodic_predictor is not None else None
+
         log_duration_prediction = self.duration_predictor(x, src_mask)
         if self.pitch_feature_level == "phoneme_level":
             pitch_prediction, pitch_embedding = self.get_pitch_embedding(
-                x, pitch_target, src_mask, p_control
+                x + sentiment_embedded if sentiment_embedded is not None else x, pitch_target, src_mask, p_control
             )
             x = x + pitch_embedding
         if self.energy_feature_level == "phoneme_level":
             energy_prediction, energy_embedding = self.get_energy_embedding(
-                x, energy_target, src_mask, e_control
+                x + sentiment_embedded if sentiment_embedded is not None else x, energy_target, src_mask, e_control
             )
             x = x + energy_embedding
 
         if duration_target is not None:
-            x, mel_len = self.length_regulator(x, duration_target, max_len)
+            x, mel_len = self.length_regulator(x + sentiment_embedded if sentiment_embedded is not None else x, duration_target, max_len)
             duration_rounded = duration_target
         else:
             duration_rounded = torch.clamp(
@@ -169,12 +180,12 @@ class VarianceAdaptor(nn.Module):
 
         if self.pitch_feature_level == "frame_level":
             pitch_prediction, pitch_embedding = self.get_pitch_embedding(
-                x, pitch_target, mel_mask, p_control
+                x + sentiment_embedded if sentiment_embedded is not None else x, pitch_target, mel_mask, p_control
             )
             x = x + pitch_embedding
         if self.energy_feature_level == "frame_level":
             energy_prediction, energy_embedding = self.get_energy_embedding(
-                x, energy_target, mel_mask, e_control
+                x + sentiment_embedded if sentiment_embedded is not None else x, energy_target, mel_mask, e_control
             )
             x = x + energy_embedding
 

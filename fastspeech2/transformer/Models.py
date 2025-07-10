@@ -35,7 +35,7 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
 class Encoder(nn.Module):
     """ Encoder """
 
-    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int):
+    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int, sentiment_mode: str | None, num_sentiments: int | None):
         super(Encoder, self).__init__()
 
         n_position = max_seq_len + 1
@@ -72,7 +72,15 @@ class Encoder(nn.Module):
             ]
         )
 
-    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, return_attns=False):
+        self.sentiment_emb_input = None
+        if sentiment_mode == "input":
+            assert num_sentiments is not None, "num_sentiments must be provided for input sentiment mode"
+            self.sentiment_emb_input = nn.Embedding(
+                num_sentiments,
+                d_word_vec,
+            )
+
+    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor, return_attns=False):
 
         enc_slf_attn_list = []
         batch_size, max_len = src_seq.shape[0], src_seq.shape[1]
@@ -91,6 +99,12 @@ class Encoder(nn.Module):
             enc_output = self.src_word_emb(src_seq) + self.position_enc[
                 :, :max_len, :
             ].expand(batch_size, -1, -1)
+        
+        if self.sentiment_emb_input is not None:
+            sentiment_emb = self.sentiment_emb_input(
+                sentiments
+            ).unsqueeze(1).expand(batch_size, max_len, -1)
+            enc_output = enc_output + sentiment_emb
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(

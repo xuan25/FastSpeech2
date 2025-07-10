@@ -354,25 +354,25 @@ class ModelGlobalConfig:
     def __init__(
         self,
         multi_speaker: bool,
-        use_sentiment: bool,
+        sentiment_mode: str | None,
         max_seq_len: int
     ):
         self.multi_speaker = multi_speaker
-        self.use_sentiment = use_sentiment
+        self.sentiment_mode = sentiment_mode
         self.max_seq_len = max_seq_len
 
     def __repr__(self):
         return (
             "ModelGlobalConfig( \n"
             f"    multi_speaker={self.multi_speaker}, \n"
-            f"    use_sentiment={self.use_sentiment}, \n"
+            f"    sentiment_mode={self.sentiment_mode}, \n"
             f"    max_seq_len={self.max_seq_len})"
         )
     
     def to_dict(self):
         return {
             "multi_speaker": self.multi_speaker,
-            "use_sentiment": self.use_sentiment,
+            "sentiment_mode": self.sentiment_mode,
             "max_seq_len": self.max_seq_len
         }
 
@@ -380,7 +380,7 @@ class ModelGlobalConfig:
     def from_dict(cls, config_dict: dict):
         return cls(
             multi_speaker=config_dict['multi_speaker'],
-            use_sentiment=config_dict['use_sentiment'],
+            sentiment_mode=config_dict['sentiment_mode'],
             max_seq_len=config_dict['max_seq_len']
         )
 

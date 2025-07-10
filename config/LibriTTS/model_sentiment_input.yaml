@@ -22,7 +22,7 @@ variance_embedding:
 
 multi_speaker: True
 
-sentiment_mode: null
+sentiment_mode: "input"
 
 max_seq_len: 1000
 
