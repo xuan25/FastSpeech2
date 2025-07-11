@@ -6,7 +6,8 @@ from string import punctuation
 import numpy as np
 import torch
 
-from fastspeech2.text import text_to_sequence
+from .dataset.datasetfs import DatasetFS
+from .text import text_to_sequence
 from g2p_en import G2p
 
 from .config import DatasetConfig, ModelConfig
@@ -138,10 +139,16 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataset_feature_stats = DatasetFeatureStats.from_json(
-        dataset_config.path_config.stats_file,
-        dataset_config.path_config.speaker_map_file
-    )
+    dataset_fs = DatasetFS(dataset_config.path_config.base_dir)
+
+    with DatasetFS(dataset_config.path_config.base_dir) as dataset_fs:
+        with dataset_fs.open(dataset_config.path_config.stats_file) as stats_stream, \
+            dataset_fs.open(dataset_config.path_config.speaker_map_file) as speaker_stream:
+            # Load dataset feature statistics
+            dataset_feature_stats = DatasetFeatureStats.from_json(
+                stats_stream,
+                speaker_stream,
+            )
 
     # prepare text
     if lang == "en":

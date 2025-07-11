@@ -1,19 +1,24 @@
 import csv
 import enum
+from functools import lru_cache
+import io
 import json
 import os
+from typing import IO
 
 import numpy as np
 from torch.utils.data import Dataset
 import tqdm
 
+from .datasetfs import DatasetFS
+
 from ..config import DatasetPathConfig, DatasetPreprocessingConfig
 from .data_models import DataBatch, DataSample
 from ..text import text_to_sequence
 
-def load_sentiment(file):
-    with open(file, newline='', encoding="utf-8") as csvfile:
-        reader = csv.reader(csvfile)
+def load_sentiment(file_stream: IO[bytes]) -> tuple[list[str], list[int], list[str]]:
+    with io.TextIOWrapper(file_stream, encoding='utf-8') as csv_stream:
+        reader = csv.reader(csv_stream)
 
         headers = next(reader)
 
@@ -37,6 +42,10 @@ class OriginalDatasetWithSentiment(Dataset):
     def __init__(
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit, sort=False
     ):
+        
+        dataset_fs = self.get_dataset_fs(dataset_path_config.base_dir)
+        self.base_dir = dataset_path_config.base_dir
+
         self.feature_dir = dataset_path_config.feature_dir
         self.text_cleaners = dataset_preprocessing_config.text_cleaners
         
@@ -48,24 +57,33 @@ class OriginalDatasetWithSentiment(Dataset):
         else:
             raise ValueError(f"Unknown split: {split}")
         
-        self.basename, self.speaker, self.text, self.raw_text = self.process_meta(
-            meta_file
-        )
-        with open(dataset_path_config.speaker_map_file) as f:
+        with dataset_fs.open(meta_file) as f:
+            self.basename, self.speaker, self.text, self.raw_text = self.process_meta(
+                f
+            )
+        with dataset_fs.open(dataset_path_config.speaker_map_file) as f:
             self.speaker_map = json.load(f)
         self.sort = sort
 
         # Load sentiment labels if provided
         if dataset_path_config.sentiment_file:
-            sent_data_ids, sent_labels, label_names = load_sentiment(dataset_path_config.sentiment_file)
+            with dataset_fs.open(dataset_path_config.sentiment_file) as f:
+                sent_data_ids, sent_labels, label_names = load_sentiment(f)
             self.sentiment_map = {data_id: sent_label for data_id, sent_label in zip(sent_data_ids, sent_labels)}
         else:
             self.sentiment_map = None
+
+        
+    @lru_cache(maxsize=None)
+    def get_dataset_fs(self, base_path):
+        return DatasetFS(base_path)
 
     def __len__(self):
         return len(self.text)
 
     def __getitem__(self, idx):
+        dataset_fs = self.get_dataset_fs(self.base_dir)
+
         basename = self.basename[idx]
         speaker = self.speaker[idx]
         speaker_id = self.speaker_map[speaker]
@@ -77,28 +95,36 @@ class OriginalDatasetWithSentiment(Dataset):
             f"{speaker}",
             f"{basename}.npy",
         )
-        mel = np.load(mel_path)
+        with dataset_fs.open(mel_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                mel = np.load(buffer)
         pitch_path = os.path.join(
             self.feature_dir,
             "pitch",
             f"{speaker}",
             f"{basename}.npy",
         )
-        pitch = np.load(pitch_path)
+        with dataset_fs.open(pitch_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                pitch = np.load(buffer)
         energy_path = os.path.join(
             self.feature_dir,
             "energy",
             f"{speaker}",
             f"{basename}.npy",
         )
-        energy = np.load(energy_path)
+        with dataset_fs.open(energy_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                energy = np.load(buffer)
         duration_path = os.path.join(
             self.feature_dir,
             "duration",
             f"{speaker}",
             f"{basename}.npy",
         )
-        duration = np.load(duration_path)
+        with dataset_fs.open(duration_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                duration = np.load(buffer)
 
         # check for nan or inf and fix them
         if np.isnan(mel).any() or np.isinf(mel).any():
@@ -133,10 +159,8 @@ class OriginalDatasetWithSentiment(Dataset):
 
         return sample
 
-    def process_meta(self, filename):
-        with open(
-            filename, "r", encoding="utf-8"
-        ) as f:
+    def process_meta(self, file_stream: IO[bytes]) -> tuple[list[str], list[str], list[str], list[str]]:
+        with io.TextIOWrapper(file_stream, encoding="utf-8") as f:
             name = []
             speaker = []
             text = []
@@ -174,7 +198,7 @@ class TextOnlyDatasetWithSentiment(Dataset):
     def __init__(
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit
     ):
-
+        dataset_fs = self.get_dataset_fs(dataset_path_config.base_dir)
         self.text_cleaners = dataset_preprocessing_config.text_cleaners
 
         meta_file = None
@@ -188,15 +212,20 @@ class TextOnlyDatasetWithSentiment(Dataset):
         # load metadata
         self.data_ids, self.speakers, self.texts, self.raw_texts = load_meta(meta_file)
 
-        with open(dataset_path_config.speaker_map_file, mode="r", encoding="utf-8") as f:
+        with dataset_fs.open(dataset_path_config.speaker_map_file) as f:
             self.speaker_map = json.load(f)
 
         # Load sentiment labels if provided
         if dataset_path_config.sentiment_file:
-            sent_data_ids, sent_labels, label_names = load_sentiment(dataset_path_config.sentiment_file)
+            with dataset_fs.open(dataset_path_config.sentiment_file) as f:
+                sent_data_ids, sent_labels, label_names = load_sentiment(f)
             self.sentiment_map = {data_id: sent_label for data_id, sent_label in zip(sent_data_ids, sent_labels)}
         else:
             self.sentiment_map = None
+    
+    @lru_cache(maxsize=None)
+    def get_dataset_fs(self, base_path):
+        return DatasetFS(base_path)
 
     def __len__(self):
         return len(self.data_ids)
@@ -233,15 +262,18 @@ def main():
     
     from torch.utils.data import DataLoader
 
-    dataset_path_config=DatasetPathConfig(
-        base_dir="../../config/LibriTTS",
-        meta_file_train="../data/LibriTTS/train.txt",
-        meta_file_val="../data/LibriTTS/val.txt",
-        speaker_map_file="../data/LibriTTS/speakers.json",
-        feature_dir="../data/LibriTTS",
-        stats_file="../data/LibriTTS/stats.json",
-        sentiment_file="../data/LibriTTS/sentiment_scores.csv",
-    )
+    dataset_path_config = DatasetPathConfig.from_dict(
+        base_dir="config/LibriTTS",
+        config_dict={
+            "base_dir": "../../data/LibriTTS.tar",
+            "meta_file_train": "train.txt",
+            "meta_file_val": "val.txt",
+            "speaker_map_file": "speakers.json",
+            "feature_dir": "",
+            "stats_file": "stats.json",
+            # "sentiment_file": "sentiment_scores.csv",
+            "sentiment_file": "../overrides/sentiment_scores_override_all_neu.csv",
+        })
     dataset_preprocessing_config=DatasetPreprocessingConfig(
         lexicon_path="../../lexicon/librispeech-lexicon.txt",
         text_cleaners=["english_cleaners"],
@@ -263,7 +295,7 @@ def main():
         print("-" * 50)
 
 
-    dataloader = DataLoader(dataset, batch_size=4, collate_fn=dataset.collate_fn)
+    dataloader = DataLoader(dataset, batch_size=4, num_workers=2, collate_fn=dataset.collate_fn)
     for batch in dataloader:
         batch: DataBatch = batch
         # print(batch)

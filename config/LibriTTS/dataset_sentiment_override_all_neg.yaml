@@ -1,10 +1,11 @@
 path:
-  meta_file_train: "../../data/LibriTTS/train.txt"
-  meta_file_val: "../../data/LibriTTS/val.txt"
-  speaker_map_file: "../../data/LibriTTS/speakers.json"
-  feature_dir: "../../data/LibriTTS"
-  stats_file: "../../data/LibriTTS/stats.json"
-  sentiment_file: "./overrides/sentiment_scores_override_all_neg.csv"
+  base_dir: "../../data/LibriTTS.tar"
+  meta_file_train: "train.txt"
+  meta_file_val: "val.txt"
+  speaker_map_file: "speakers.json"
+  feature_dir: ""
+  stats_file: "stats.json"
+  sentiment_file: "../overrides/sentiment_scores_override_all_neg.csv"
 
 properties:
   pitch_feature_level: "phoneme_level" # support 'phoneme_level' or 'frame_level'

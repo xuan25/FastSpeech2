@@ -1,4 +1,6 @@
+import io
 import json
+from typing import IO
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -40,7 +42,7 @@ def pad_2D(inputs, maxlen=None):
 
 class DataSample:
 
-    def __init__(self, data_id: str, speaker: int, text: npt.NDArray[np.intp], raw_text: str, mel: npt.NDArray[np.float_] | None, pitch: npt.NDArray[np.float_] | None, energy: npt.NDArray[np.float_] | None, duration: npt.NDArray[np.float_] | None, sentiment: int | None):
+    def __init__(self, data_id: str, speaker: int, text: npt.NDArray[np.intp], raw_text: str, mel: npt.NDArray[np.float64] | None, pitch: npt.NDArray[np.float64] | None, energy: npt.NDArray[np.float64] | None, duration: npt.NDArray[np.float64] | None, sentiment: int | None):
         self.data_id = data_id
         self.speaker = speaker
         self.text = text
@@ -78,10 +80,10 @@ class DataBatch:
         self.speakers: npt.NDArray[np.intp] = np.array([data_samples[idx].speaker for idx in sample_idxs])
         self.texts: npt.NDArray[np.intp] = pad_1D([data_samples[idx].text for idx in sample_idxs])
         self.raw_texts = [data_samples[idx].raw_text for idx in sample_idxs]
-        self.mels: npt.NDArray[np.float_] | None = pad_2D([data_samples[idx].mel for idx in sample_idxs]) if data_samples[0].mel is not None else None
-        self.pitches: npt.NDArray[np.float_] | None = pad_1D([data_samples[idx].pitch for idx in sample_idxs]) if data_samples[0].pitch is not None else None
-        self.energies: npt.NDArray[np.float_] | None = pad_1D([data_samples[idx].energy for idx in sample_idxs]) if data_samples[0].energy is not None else None
-        self.durations: npt.NDArray[np.float_] | None = pad_1D([data_samples[idx].duration for idx in sample_idxs]) if data_samples[0].duration is not None else None
+        self.mels: npt.NDArray[np.float64] | None = pad_2D([data_samples[idx].mel for idx in sample_idxs]) if data_samples[0].mel is not None else None
+        self.pitches: npt.NDArray[np.float64] | None = pad_1D([data_samples[idx].pitch for idx in sample_idxs]) if data_samples[0].pitch is not None else None
+        self.energies: npt.NDArray[np.float64] | None = pad_1D([data_samples[idx].energy for idx in sample_idxs]) if data_samples[0].energy is not None else None
+        self.durations: npt.NDArray[np.float64] | None = pad_1D([data_samples[idx].duration for idx in sample_idxs]) if data_samples[0].duration is not None else None
         self.sentiments: npt.NDArray[np.intp] | None = np.array([data_samples[idx].sentiment for idx in sample_idxs]) if data_samples[0].sentiment is not None else None
 
     def __repr__(self):
@@ -177,12 +179,12 @@ class DatasetFeatureStats:
         return f"DatasetStats(pitch_min={self.pitch_min}, pitch_max={self.pitch_max}, energy_min={self.energy_min}, energy_max={self.energy_max})"
 
     @classmethod
-    def from_json(cls, stats_file: str, speaker_file: str):
-        with open(stats_file, "r", encoding="utf-8") as f:
+    def from_json(cls, stats_stream: IO[bytes], speaker_stream: IO[bytes]):
+        with io.TextIOWrapper(stats_stream, encoding="utf-8") as f:
             stats = json.load(f)
             pitch_min, pitch_max, pitch_mean, pitch_std = stats["pitch"]
             energy_min, energy_max, energy_mean, energy_std = stats["energy"]
-        with open(speaker_file, "r", encoding="utf-8") as f:
+        with io.TextIOWrapper(speaker_stream, encoding="utf-8") as f:
             n_speakers = len(json.load(f))
         return cls(
             pitch_min=pitch_min,

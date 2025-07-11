@@ -5,6 +5,7 @@ import torch
 import tqdm
 from torch.utils.data import DataLoader
 
+from fastspeech2.dataset.datasetfs import DatasetFS
 from fastspeech2.model.data_models import FastSpeech2Output
 
 from fastspeech2.config import (DatasetConfig, DatasetFeaturePropertiesConfig,
@@ -123,10 +124,13 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataset_feature_stats = DatasetFeatureStats.from_json(
-        dataset_config.path_config.stats_file,
-        dataset_config.path_config.speaker_map_file
-    )
+    with DatasetFS(dataset_config.path_config.base_dir) as dataset_fs:
+        with dataset_fs.open(dataset_config.path_config.stats_file) as stats_stream, \
+             dataset_fs.open(dataset_config.path_config.speaker_map_file) as speaker_stream:
+            dataset_feature_stats = DatasetFeatureStats.from_json(
+                stats_stream,
+                speaker_stream,
+            )
 
     # Load vocoder
     vocoder = get_vocoder(model_config.vocoder_config, device)

@@ -2,12 +2,13 @@ import argparse
 import json
 import os
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
+
+from .dataset.datasetfs import DatasetFS
 
 from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, TrainConfig, TrainOptimizerConfig
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
@@ -89,10 +90,16 @@ def main():
     ckpt_output_dir = os.path.join(output_dir, train_config.output_config.ckpt_dir_name)
     log_output_dir = os.path.join(output_dir, train_config.output_config.log_dir_name)
 
-    dataset_feature_stats = DatasetFeatureStats.from_json(
-        dataset_config.path_config.stats_file,
-        dataset_config.path_config.speaker_map_file,
-    )
+    dataset_fs = DatasetFS(dataset_config.path_config.base_dir)
+
+    with DatasetFS(dataset_config.path_config.base_dir) as dataset_fs:
+        with dataset_fs.open(dataset_config.path_config.stats_file) as stats_stream, \
+            dataset_fs.open(dataset_config.path_config.speaker_map_file) as speaker_stream:
+            # Load dataset feature statistics
+            dataset_feature_stats = DatasetFeatureStats.from_json(
+                stats_stream,
+                speaker_stream,
+            )
 
     git_revision = None
     try:

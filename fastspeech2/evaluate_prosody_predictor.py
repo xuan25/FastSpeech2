@@ -2,6 +2,8 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 
+from .dataset.datasetfs import DatasetFS
+
 from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, TrainConfig
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from .model.data_models import ProsodyPredictorLossResult
@@ -135,10 +137,14 @@ def main():
     model_config = ModelConfig.load_from_yaml(args.model_config)
     train_config = TrainConfig.load_from_yaml(args.train_config)
 
-    dataset_stats = DatasetFeatureStats.from_json(
-        dataset_config.path_config.stats_file,
-        dataset_config.path_config.speaker_map_file,
-    )
+    with DatasetFS(dataset_config.path_config.base_dir) as dataset_fs:
+        with dataset_fs.open(dataset_config.path_config.stats_file) as stats_stream, \
+            dataset_fs.open(dataset_config.path_config.speaker_map_file) as speaker_stream:
+            # Load dataset feature statistics
+            dataset_stats = DatasetFeatureStats.from_json(
+                stats_stream,
+                speaker_stream,
+            )
 
     model = get_model_infer(
         ckpt_path,

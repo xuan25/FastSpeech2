@@ -12,17 +12,19 @@ class DatasetPathConfig:
         stats_file: str,
         sentiment_file: str | None = None,
     ):
-        self.meta_file_train = os.path.join(base_dir, meta_file_train)
-        self.meta_file_val = os.path.join(base_dir, meta_file_val)
-        self.speaker_map_file = os.path.join(base_dir, speaker_map_file)
-        self.feature_dir = os.path.join(base_dir, feature_dir)
-        self.stats_file = os.path.join(base_dir, stats_file)
-        self.sentiment_file = os.path.join(base_dir, sentiment_file) if sentiment_file else None
+        self.base_dir = base_dir
+        self.meta_file_train = meta_file_train
+        self.meta_file_val = meta_file_val
+        self.speaker_map_file = speaker_map_file
+        self.feature_dir = feature_dir
+        self.stats_file = stats_file
+        self.sentiment_file = sentiment_file
 
     def __repr__(self):
         # with formatting
         return (
             "DatasetPathConfig( \n"
+            f"    base_dir={self.base_dir}, \n"
             f"    meta_file_train={self.meta_file_train}, \n"
             f"    meta_file_val={self.meta_file_val}, \n"
             f"    speaker_map_file={self.speaker_map_file}, \n"
@@ -33,6 +35,7 @@ class DatasetPathConfig:
 
     def to_dict(self):
         return {
+            "base_dir": self.base_dir,
             "meta_file_train": self.meta_file_train,
             "meta_file_val": self.meta_file_val,
             "speaker_map_file": self.speaker_map_file,
@@ -44,7 +47,7 @@ class DatasetPathConfig:
     @classmethod
     def from_dict(cls, base_dir: str, config_dict: dict):
         return cls(
-            base_dir=base_dir,
+            base_dir=os.path.join(base_dir, config_dict['base_dir']),
             meta_file_train=config_dict['meta_file_train'],
             meta_file_val=config_dict['meta_file_val'],
             speaker_map_file=config_dict['speaker_map_file'],

@@ -119,4 +119,5 @@ fastspeech2/hifigan/ckpt/*.pth.tar
 
 # temp files
 .temp
-data
+data/*.tar
+data/*.tar.index
