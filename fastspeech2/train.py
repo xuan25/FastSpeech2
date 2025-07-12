@@ -137,7 +137,7 @@ def main():
         batch_size=batch_size,
         shuffle=True,
         collate_fn=dataset.collate_fn,
-        num_workers=8
+        num_workers=1
     )
 
     # Prepare model

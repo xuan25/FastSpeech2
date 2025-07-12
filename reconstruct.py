@@ -145,7 +145,7 @@ def main():
     batchs = DataLoader(
         dataset,
         batch_size=batch_size,
-        num_workers=16,
+        num_workers=1,
         collate_fn=dataset.collate_fn,
     )
 

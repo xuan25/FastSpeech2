@@ -1,4 +1,5 @@
 import argparse
+from functools import lru_cache
 import torch
 from torch.utils.data import DataLoader
 
@@ -29,11 +30,12 @@ def get_model_infer(ckpt_path,
     model.requires_grad_(False)
     return model
 
-def evaluate(model, step,
-             batch_size,
-             dataset_config: DatasetConfig,
-             logger=None, device: str | torch.device="cpu"):
-
+@lru_cache(maxsize=None)
+def get_dataset_loader(
+    dataset_config: DatasetConfig,
+    batch_size: int,
+    device: str | torch.device = "cpu",
+) -> tuple[OriginalDatasetWithSentiment, DataLoader]:
     # Get dataset
     dataset = OriginalDatasetWithSentiment(
         dataset_path_config=dataset_config.path_config,
@@ -46,8 +48,32 @@ def evaluate(model, step,
         batch_size=batch_size,
         shuffle=False,
         collate_fn=dataset.collate_fn,
-        num_workers=8
+        num_workers=0
     )
+
+    return dataset, loader
+
+def evaluate(model, step,
+             batch_size,
+             dataset_config: DatasetConfig,
+             logger=None, device: str | torch.device="cpu"):
+
+    # Get dataset
+    # dataset = OriginalDatasetWithSentiment(
+    #     dataset_path_config=dataset_config.path_config,
+    #     dataset_preprocessing_config=dataset_config.preprocessing_config,
+    #     split=DatasetSplit.VAL,
+    # )
+
+    # loader = DataLoader(
+    #     dataset,
+    #     batch_size=batch_size,
+    #     shuffle=False,
+    #     collate_fn=dataset.collate_fn,
+    #     num_workers=2
+    # )
+
+    dataset, loader = get_dataset_loader(dataset_config, batch_size, device)
 
     # Get loss function
     loss_func = ProsodyPredictorLoss(dataset_config.feature_properties_config).to(device)
