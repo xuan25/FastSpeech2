@@ -20,7 +20,7 @@ python train_prosody_predictor.py --dataset_config config/LibriTTS/dataset_senti
 
 
 
-python train_prosody_predictor.py --dataset_config config/LibriTTS/dataset.yaml --train_config config/LibriTTS/train_prosody_predictor.yaml --model_config config/LibriTTS/model.yaml --output_dir output/prosody_predictor/test
+<!-- python train_prosody_predictor.py --dataset_config config/LibriTTS/dataset.yaml --train_config config/LibriTTS/train_prosody_predictor.yaml --model_config config/LibriTTS/model.yaml --output_dir output/prosody_predictor/test -->
 
 
 

@@ -38,6 +38,187 @@ class DatasetSplit(enum.Enum):
     TRAIN = "train"
     VAL = "val"
 
+
+
+
+class DatasetWithSentimentContrastive(Dataset):
+    def __init__(
+        self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit, sort=False
+    ):
+        
+        dataset_fs = self.get_dataset_fs(dataset_path_config.base_dir)
+        self.base_dir = dataset_path_config.base_dir
+
+        self.feature_dir = dataset_path_config.feature_dir
+        self.text_cleaners = dataset_preprocessing_config.text_cleaners
+        
+        meta_file = None
+        if split == DatasetSplit.TRAIN:
+            meta_file = dataset_path_config.meta_file_train
+        elif split == DatasetSplit.VAL:
+            meta_file = dataset_path_config.meta_file_val
+        else:
+            raise ValueError(f"Unknown split: {split}")
+        
+        with dataset_fs.open(meta_file) as f:
+            self.basename, self.speaker, self.text, self.raw_text = self.process_meta(
+                f
+            )
+        with dataset_fs.open(dataset_path_config.speaker_map_file) as f:
+            self.speaker_map = json.load(f)
+        self.sort = sort
+
+        # Load sentiment labels if provided
+        if dataset_path_config.sentiment_file:
+            with dataset_fs.open(dataset_path_config.sentiment_file) as f:
+                sent_data_ids, sent_labels, label_names = load_sentiment(f)
+            self.sentiment_map = {data_id: sent_label for data_id, sent_label in zip(sent_data_ids, sent_labels)}
+        else:
+            self.sentiment_map = None
+
+        
+    @lru_cache(maxsize=None)
+    def get_dataset_fs(self, base_path):
+        return DatasetFS(base_path)
+
+    def __len__(self):
+        return len(self.text)
+
+    def __getitem__(self, idx):
+        dataset_fs = self.get_dataset_fs(self.base_dir)
+
+        basename = self.basename[idx]
+        speaker = self.speaker[idx]
+        speaker_id = self.speaker_map[speaker]
+        raw_text = self.raw_text[idx]
+        phone = np.array(text_to_sequence(self.text[idx], self.text_cleaners))
+        mel_path = os.path.join(
+            self.feature_dir,
+            "mel",
+            f"{speaker}",
+            f"{basename}.npy",
+        )
+        with dataset_fs.open(mel_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                mel = np.load(buffer)
+        pitch_path = os.path.join(
+            self.feature_dir,
+            "pitch",
+            f"{speaker}",
+            f"{basename}.npy",
+        )
+        with dataset_fs.open(pitch_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                pitch = np.load(buffer)
+        energy_path = os.path.join(
+            self.feature_dir,
+            "energy",
+            f"{speaker}",
+            f"{basename}.npy",
+        )
+        with dataset_fs.open(energy_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                energy = np.load(buffer)
+        duration_path = os.path.join(
+            self.feature_dir,
+            "duration",
+            f"{speaker}",
+            f"{basename}.npy",
+        )
+        with dataset_fs.open(duration_path) as f:
+            with io.BytesIO(f.read()) as buffer:
+                duration = np.load(buffer)
+
+        # check for nan or inf and fix them
+        if np.isnan(mel).any() or np.isinf(mel).any():
+            mel = np.nan_to_num(mel)
+            tqdm.tqdm.write(f"Fixed nan values in mel for {basename}")
+        if np.isnan(pitch).any() or np.isinf(pitch).any():
+            pitch = np.nan_to_num(pitch)
+            tqdm.tqdm.write(f"Fixed nan values in pitch for {basename}")
+        if np.isnan(energy).any() or np.isinf(energy).any():
+            energy = np.nan_to_num(energy)
+            tqdm.tqdm.write(f"Fixed nan values in energy for {basename}")
+        if np.isnan(duration).any() or np.isinf(duration).any():
+            duration = np.nan_to_num(duration)
+            tqdm.tqdm.write(f"Fixed nan values in duration for {basename}")
+
+        sentiment_label = self.sentiment_map.get(basename, -1) if self.sentiment_map else None
+
+        if sentiment_label == -1:
+            raise ValueError(f"Sentiment label not found for {basename}")
+
+        sample = DataSample(
+            data_id=basename,
+            speaker=speaker_id,
+            text=phone,
+            raw_text=raw_text,
+            mel=mel,
+            pitch=pitch,
+            energy=energy,
+            duration=duration,
+            sentiment=sentiment_label
+        )
+
+        sample_neg1 = DataSample(
+            data_id=basename,
+            speaker=speaker_id,
+            text=phone,
+            raw_text=raw_text,
+            mel=mel,
+            pitch=pitch,
+            energy=energy,
+            duration=duration,
+            sentiment=(sentiment_label + 1) % 3 if sentiment_label is not None else None # simple negative sample generation by adding 1 to sentiment label
+        )
+
+        sample_neg2 = DataSample(
+            data_id=basename,
+            speaker=speaker_id,
+            text=phone,
+            raw_text=raw_text,
+            mel=mel,
+            pitch=pitch,
+            energy=energy,
+            duration=duration,
+            sentiment=(sentiment_label + 2) % 3 if sentiment_label is not None else None # simple negative sample generation by adding 2 to sentiment label
+        )
+        
+        # the first sample is the original sample, the second and third sample is negative contrastive samples
+        mask = np.array([0, -1, -1], dtype=np.int8)  # 0 for original, -1 for negative samples
+
+        return ([sample, sample_neg1, sample_neg2], mask)
+
+    def process_meta(self, file_stream: IO[bytes]) -> tuple[list[str], list[str], list[str], list[str]]:
+        with io.TextIOWrapper(file_stream, encoding="utf-8") as f:
+            name = []
+            speaker = []
+            text = []
+            raw_text = []
+            for line in f.readlines():
+                n, s, t, r = line.strip("\n").split("|")
+                name.append(n)
+                speaker.append(s)
+                text.append(t)
+                raw_text.append(r)
+            return name, speaker, text, raw_text
+
+    def collate_fn(self, data_samples_with_mask_batch: list[tuple[list[DataSample], np.ndarray]]):
+
+        data_samples = []
+        mask_arrays = []
+        for data_samples_partial, masks_partial in data_samples_with_mask_batch:
+            data_samples.extend(data_samples_partial)
+            mask_arrays.append(masks_partial)
+
+        batch = DataBatch(data_samples, sort=self.sort)
+
+        mask = np.concatenate(mask_arrays, axis=0)
+        mask = mask[batch.sample_idxs]  # reorder mask according to sample_idxs
+
+        return batch, mask
+
+
 class OriginalDatasetWithSentiment(Dataset):
     def __init__(
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit, sort=False

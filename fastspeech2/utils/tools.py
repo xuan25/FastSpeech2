@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from ..config import DatasetFeaturePropertiesConfig, ModelVocoderConfig
 
 from ..dataset.data_models import DataBatchTorch, DatasetFeatureStats
-from ..model.data_models import FastSpeech2Output, FastSpeech2LossResult, ProsodyPredictorLossResult
+from ..model.data_models import FastSpeech2Output, FastSpeech2LossResult, ProsodyPredictorContrastiveLossResult, ProsodyPredictorLossResult
 
 
 matplotlib.use("Agg")
@@ -101,6 +101,24 @@ def log_prosody_predictor(
         logger.add_scalar("Loss/energy_loss", losses.energy_loss, step)
         logger.add_scalar("Loss/duration_loss", losses.duration_loss, step)
 
+def log_prosody_predictor_contrastive(
+    logger, step=None, losses: ProsodyPredictorContrastiveLossResult | None=None
+):
+    if losses is not None:
+        logger.add_scalar("Loss/total_loss", losses.total_loss, step)
+        logger.add_scalar("Loss/pitch_loss", losses.pitch_loss, step)
+        logger.add_scalar("Loss/energy_loss", losses.energy_loss, step)
+        logger.add_scalar("Loss/duration_loss", losses.duration_loss, step)
+        logger.add_scalar("Loss/pitch_loss_std", losses.pitch_loss_std, step)
+        logger.add_scalar("Loss/energy_loss_std", losses.energy_loss_std, step)
+        logger.add_scalar("Loss/duration_loss_std", losses.duration_loss_std, step)
+        logger.add_scalar("Loss/pitch_loss_neg", losses.pitch_loss_neg, step)
+        logger.add_scalar("Loss/energy_loss_neg", losses.energy_loss_neg, step)
+        logger.add_scalar("Loss/duration_loss_neg", losses.duration_loss_neg, step)
+        logger.add_scalar("Loss/pitch_loss_pos", losses.pitch_loss_pos, step)
+        logger.add_scalar("Loss/energy_loss_pos", losses.energy_loss_pos, step)
+        logger.add_scalar("Loss/duration_loss_pos", losses.duration_loss_pos, step)
+
 def get_mask_from_lengths(lengths, max_len=None):
     batch_size = lengths.shape[0]
     if max_len is None:
@@ -117,6 +135,7 @@ def expand(values, durations):
     for value, d in zip(values, durations):
         out += [value] * max(0, int(d))
     return np.array(out)
+    
 
 
 def synth_one_sample(targets: DataBatchTorch, predictions: FastSpeech2Output, vocoder, vocoder_config: ModelVocoderConfig, stats: DatasetFeatureStats, feature_properties_config: DatasetFeaturePropertiesConfig):

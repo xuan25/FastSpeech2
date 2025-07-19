@@ -47,3 +47,41 @@ class ProsodyPredictorLossResult:
 
     def __repr__(self):
         return f"LossResult(total_loss={self.total_loss}, pitch_loss={self.pitch_loss}, energy_loss={self.energy_loss}, duration_loss={self.duration_loss})"
+
+class ProsodyPredictorContrastiveLossResult:
+    def __init__(self, 
+                 pitch_loss_std: torch.Tensor, energy_loss_std: torch.Tensor, duration_loss_std: torch.Tensor,
+                 pitch_loss_neg: torch.Tensor, energy_loss_neg: torch.Tensor, duration_loss_neg: torch.Tensor,
+                 pitch_loss_pos: torch.Tensor, energy_loss_pos: torch.Tensor, duration_loss_pos: torch.Tensor,
+                 pitch_loss: torch.Tensor, energy_loss: torch.Tensor, duration_loss: torch.Tensor,
+                 total_loss: torch.Tensor):
+        self.pitch_loss_std = pitch_loss_std
+        self.energy_loss_std = energy_loss_std
+        self.duration_loss_std = duration_loss_std
+        self.pitch_loss_neg = pitch_loss_neg
+        self.energy_loss_neg = energy_loss_neg
+        self.duration_loss_neg = duration_loss_neg
+        self.pitch_loss_pos = pitch_loss_pos
+        self.energy_loss_pos = energy_loss_pos
+        self.duration_loss_pos = duration_loss_pos
+        self.pitch_loss = pitch_loss
+        self.energy_loss = energy_loss
+        self.duration_loss = duration_loss
+        self.total_loss = total_loss
+
+    def __repr__(self):
+        return (
+            f"ProsodyPredictorLossResult(pitch_loss_std={self.pitch_loss_std}, "
+            f"energy_loss_std={self.energy_loss_std}, "
+            f"duration_loss_std={self.duration_loss_std}, "
+            f"pitch_loss_neg={self.pitch_loss_neg}, "
+            f"energy_loss_neg={self.energy_loss_neg}, "
+            f"duration_loss_neg={self.duration_loss_neg}, "
+            f"pitch_loss_pos={self.pitch_loss_pos}, "
+            f"energy_loss_pos={self.energy_loss_pos}, "
+            f"duration_loss_pos={self.duration_loss_pos}, "
+            f"pitch_loss={self.pitch_loss}, "
+            f"energy_loss={self.energy_loss}, "
+            f"duration_loss={self.duration_loss}, "
+            f"total_loss={self.total_loss})"
+        )

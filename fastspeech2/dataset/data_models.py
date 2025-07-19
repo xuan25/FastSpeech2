@@ -70,6 +70,8 @@ class DataBatch:
         else:
             sample_idxs: list[int] = np.arange(self.batch_size).tolist()
 
+        self.sample_idxs = sample_idxs
+
         self.text_lens: npt.NDArray[np.intp] = np.array([data_samples[idx].text.shape[0] for idx in sample_idxs])
         self.mel_lens: npt.NDArray[np.intp] | None = np.array([data_samples[idx].mel.shape[0] for idx in sample_idxs]) if data_samples[0].mel is not None else None # type: ignore
 
