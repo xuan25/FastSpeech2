@@ -132,7 +132,7 @@ class FastSpeech2Loss(nn.Module):
 class ProsodyPredictorContrastiveLoss(nn.Module):
     """ FastSpeech2 Loss """
 
-    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, lambda_neg: float = 0.03, lambda_pos: float = 1.0):
+    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, lambda_neg: float = 0.00001, lambda_pos: float = 0.00001):
         super(ProsodyPredictorContrastiveLoss, self).__init__()
 
         self.lambda_neg = lambda_neg

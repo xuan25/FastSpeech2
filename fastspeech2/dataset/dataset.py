@@ -76,7 +76,14 @@ class DatasetWithSentimentContrastive(Dataset):
         else:
             self.sentiment_map = None
 
-        
+        self.sentiment_map_reverse: dict[int, list[int]] = {}
+        if self.sentiment_map:
+            for idx in range(len(self.basename)):
+                sentiment_label = self.sentiment_map[self.basename[idx]]
+                if sentiment_label not in self.sentiment_map_reverse:
+                    self.sentiment_map_reverse[sentiment_label] = []
+                self.sentiment_map_reverse[sentiment_label].append(idx)
+
     @lru_cache(maxsize=None)
     def get_dataset_fs(self, base_path):
         return DatasetFS(base_path)
@@ -84,7 +91,7 @@ class DatasetWithSentimentContrastive(Dataset):
     def __len__(self):
         return len(self.text)
 
-    def __getitem__(self, idx):
+    def __load_data_sample(self, idx: int) -> DataSample:
         dataset_fs = self.get_dataset_fs(self.base_dir)
 
         basename = self.basename[idx]
@@ -159,35 +166,89 @@ class DatasetWithSentimentContrastive(Dataset):
             duration=duration,
             sentiment=sentiment_label
         )
+        return sample
+    
+    def __load_data_sample_text(self, idx: int) -> DataSample:
+        basename = self.basename[idx]
+        speaker = self.speaker[idx]
+        speaker_id = self.speaker_map[speaker]
+        raw_text = self.raw_text[idx]
+        phone = np.array(text_to_sequence(self.text[idx], self.text_cleaners))
 
-        sample_neg1 = DataSample(
+        sentiment_label = self.sentiment_map.get(basename, -1) if self.sentiment_map else None
+
+        if sentiment_label == -1:
+            raise ValueError(f"Sentiment label not found for {basename}")
+
+        sample = DataSample(
             data_id=basename,
             speaker=speaker_id,
             text=phone,
             raw_text=raw_text,
-            mel=mel,
-            pitch=pitch,
-            energy=energy,
-            duration=duration,
-            sentiment=(sentiment_label + 1) % 3 if sentiment_label is not None else None # simple negative sample generation by adding 1 to sentiment label
+            mel=None,
+            pitch=None,
+            energy=None,
+            duration=None,
+            sentiment=sentiment_label
+        )
+        return sample
+    
+    def __getitem__(self, idx):
+
+        sample: DataSample = self.__load_data_sample(idx)
+
+        sample_neg1 = DataSample(
+            data_id=sample.data_id,
+            speaker=sample.speaker,
+            text=sample.text,
+            raw_text=sample.raw_text,
+            mel=sample.mel,
+            pitch=sample.pitch,
+            energy=sample.energy,
+            duration=sample.duration,
+            sentiment=(sample.sentiment + 1) % 3 if sample.sentiment is not None else None # simple negative sample generation by adding 1 to sentiment label
         )
 
         sample_neg2 = DataSample(
-            data_id=basename,
-            speaker=speaker_id,
-            text=phone,
-            raw_text=raw_text,
-            mel=mel,
-            pitch=pitch,
-            energy=energy,
-            duration=duration,
-            sentiment=(sentiment_label + 2) % 3 if sentiment_label is not None else None # simple negative sample generation by adding 2 to sentiment label
+            data_id=sample.data_id,
+            speaker=sample.speaker,
+            text=sample.text,
+            raw_text=sample.raw_text,
+            mel=sample.mel,
+            pitch=sample.pitch,
+            energy=sample.energy,
+            duration=sample.duration,
+            sentiment=(sample.sentiment + 2) % 3 if sample.sentiment is not None else None # simple negative sample generation by adding 2 to sentiment label
         )
-        
-        # the first sample is the original sample, the second and third sample is negative contrastive samples
-        mask = np.array([0, -1, -1], dtype=np.int8)  # 0 for original, -1 for negative samples
 
-        return ([sample, sample_neg1, sample_neg2], mask)
+        # sample 2 positive samples form the same sentiment class
+        assert sample.sentiment is not None, "Sample sentiment must not be None for contrastive learning"
+        sentiment_samples = self.sentiment_map_reverse[sample.sentiment]
+        if len(sentiment_samples) < 3:
+            raise ValueError(f"Not enough samples for sentiment {sample.sentiment} to create contrastive samples")
+        
+        sample_pos1 = self.__load_data_sample_text(np.random.choice(sentiment_samples))
+        text_length_pos1 = min(sample_pos1.text.shape[0], sample.text.shape[0])
+        sample_pos1.text = sample.text[:text_length_pos1]  # ensure same length for contrastive learning
+        sample_pos1.duration = sample.duration[:text_length_pos1] if sample.duration is not None else None
+        sample_pos1.pitch = sample.pitch[:text_length_pos1] if sample.pitch is not None else None
+        sample_pos1.energy = sample.energy[:text_length_pos1] if sample.energy is not None else None
+        mel_length_pos1 = np.sum(sample_pos1.duration) if sample_pos1.duration is not None else 0
+        sample_pos1.mel = sample.mel[:mel_length_pos1] if sample.mel is not None else None
+
+        sample_pos2 = self.__load_data_sample(np.random.choice(sentiment_samples))
+        text_length_pos2 = min(sample_pos2.text.shape[0], sample.text.shape[0])
+        sample_pos2.text = sample.text[:text_length_pos2]
+        sample_pos2.duration = sample.duration[:text_length_pos2] if sample.duration is not None else None
+        sample_pos2.pitch = sample.pitch[:text_length_pos2] if sample.pitch is not None else None
+        sample_pos2.energy = sample.energy[:text_length_pos2] if sample.energy is not None else None
+        mel_length_pos2 = np.sum(sample_pos2.duration) if sample_pos2.duration is not None else 0
+        sample_pos2.mel = sample.mel[:mel_length_pos2] if sample.mel is not None else None
+
+        # the first sample is the original sample, the second and third sample is negative contrastive samples
+        mask = np.array([0, -1, -1, 1, 1], dtype=np.int8)  # 0 for original, -1 for negative samples
+
+        return ([sample, sample_neg1, sample_neg2, sample_pos1, sample_pos2], mask)
 
     def process_meta(self, file_stream: IO[bytes]) -> tuple[list[str], list[str], list[str], list[str]]:
         with io.TextIOWrapper(file_stream, encoding="utf-8") as f:

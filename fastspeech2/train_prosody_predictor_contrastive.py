@@ -179,11 +179,11 @@ def main():
     val_step = train_config.step_config.val_step
 
     total_step_bar = tqdm(total=total_step, desc="Training", position=0, dynamic_ncols=True)
-    total_step_bar.n = training_steps
-    total_step_bar.update()
+    total_step_bar.n = step
 
     while True:
         epoch_bar = tqdm(total=len(loader), desc="Epoch {}".format(epoch), position=1, dynamic_ncols=True)
+        epoch_bar.n = 1
         for batch, contrastive_mask in loader:
 
             batch: DataBatch = batch
