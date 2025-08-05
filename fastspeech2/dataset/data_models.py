@@ -88,6 +88,9 @@ class DataBatch:
         self.durations: npt.NDArray[np.float64] | None = pad_1D([data_samples[idx].duration for idx in sample_idxs]) if data_samples[0].duration is not None else None
         self.sentiments: npt.NDArray[np.intp] | None = np.array([data_samples[idx].sentiment for idx in sample_idxs]) if data_samples[0].sentiment is not None else None
 
+        # sort samples the last
+        self.data_samples = [data_samples[idx] for idx in sample_idxs]
+
     def __repr__(self):
         return f"DataBatch(data_ids={self.data_ids}, speakers={self.speakers}, texts={self.texts}, raw_texts={self.raw_texts}, mels={self.mels}, pitches={self.pitches}, energies={self.energies}, durations={self.durations})"
     

@@ -193,7 +193,7 @@ class DatasetWithSentimentContrastive(Dataset):
         )
         return sample
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> tuple[list[DataSample], np.ndarray]:
 
         sample: DataSample = self.__load_data_sample(idx)
 
@@ -420,22 +420,6 @@ class OriginalDatasetWithSentiment(Dataset):
         return batch
 
 
-def load_meta(filename):
-    with open(
-        filename, "r", encoding="utf-8"
-    ) as f:
-        name = []
-        speaker = []
-        text = []
-        raw_text = []
-        for line in f.readlines():
-            n, s, t, r = line.strip("\n").split("|")
-            name.append(n)
-            speaker.append(s)
-            text.append(t)
-            raw_text.append(r)
-        return name, speaker, text, raw_text
-
 class TextOnlyDatasetWithSentiment(Dataset):
     def __init__(
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit
@@ -452,7 +436,7 @@ class TextOnlyDatasetWithSentiment(Dataset):
             raise ValueError(f"Unknown split: {split}")
 
         # load metadata
-        self.data_ids, self.speakers, self.texts, self.raw_texts = load_meta(meta_file)
+        self.data_ids, self.speakers, self.texts, self.raw_texts = self.process_meta(dataset_fs.open(meta_file))
 
         with dataset_fs.open(dataset_path_config.speaker_map_file) as f:
             self.speaker_map = json.load(f)
@@ -464,6 +448,20 @@ class TextOnlyDatasetWithSentiment(Dataset):
             self.sentiment_map = {data_id: sent_label for data_id, sent_label in zip(sent_data_ids, sent_labels)}
         else:
             self.sentiment_map = None
+
+    def process_meta(self, file_stream: IO[bytes]) -> tuple[list[str], list[str], list[str], list[str]]:
+        with io.TextIOWrapper(file_stream, encoding="utf-8") as f:
+            name = []
+            speaker = []
+            text = []
+            raw_text = []
+            for line in f.readlines():
+                n, s, t, r = line.strip("\n").split("|")
+                name.append(n)
+                speaker.append(s)
+                text.append(t)
+                raw_text.append(r)
+            return name, speaker, text, raw_text
     
     @lru_cache(maxsize=None)
     def get_dataset_fs(self, base_path):

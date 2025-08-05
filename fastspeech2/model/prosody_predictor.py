@@ -57,7 +57,7 @@ class ProsodyPredictor(nn.Module):
         p_control: float = 1.0,
         e_control: float = 1.0,
         d_control: float = 1.0,
-    ):
+    ) -> ProsodyPredictorOutput:
         text_masks = get_mask_from_lengths(batch.text_lens, batch.text_len_max)
         frame_masks = (
             get_mask_from_lengths(batch.mel_lens, batch.mel_len_max)
