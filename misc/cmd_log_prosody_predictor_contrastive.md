@@ -27,6 +27,28 @@ python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/d
 python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-reworked-hardremovecontrastive
 
 
+
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001
+
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1
+
+
+
+
+
+
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.1.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-0.1
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.01.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-0.01
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_sentiment.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --output_dir output/prosody_predictor_contrastive/sentiment_input-0
+
+
 # pred
 
 python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input/pred/val.csv --dataset_config config/LibriTTS/dataset_sentiment.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
@@ -57,6 +79,36 @@ python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_c
 
 python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-0-reworked/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-0-reworked/pred/val_pos.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_pos.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
 
+
+
+
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val.csv --dataset_config config/LibriTTS/dataset_sentiment.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_neg.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_neg.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_neu.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_neu.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_pos.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_pos.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/pred/val.csv --dataset_config config/LibriTTS/dataset_sentiment.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/pred/val_neg.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_neg.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/pred/val_neu.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_neu.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.01/pred/val_pos.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_pos.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/pred/val.csv --dataset_config config/LibriTTS/dataset_sentiment.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/pred/val_neg.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_neg.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/pred/val_neu.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_neu.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
+
+python predict_batch_prosody_predictor.py --ckpt_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/ckpt/40000.pth --output_path output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/pred/val_pos.csv --dataset_config config/LibriTTS/dataset_sentiment_override_all_pos.yaml --model_config config/LibriTTS/model_sentiment_input.yaml --data_split val
 
 
 
