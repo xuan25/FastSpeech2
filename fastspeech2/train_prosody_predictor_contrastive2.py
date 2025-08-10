@@ -15,14 +15,14 @@ from .dataset.datasetfs import DatasetFS
 from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, TrainConfig, TrainOptimizerConfig
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from .model.prosody_predictor import ProsodyPredictor, ProsodyPredictorOutput
-from .model.loss import ProsodyPredictorContrastiveLoss, ProsodyPredictorLossResult
+from .model.loss import ProsodyPredictorContrastiveLoss, ProsodyPredictorContrastiveLoss2, ProsodyPredictorLossResult
 from .model.optimizer import ScheduledOptim
 from .utils.model import get_param_num
 from .utils.tools import log_prosody_predictor, log_prosody_predictor_contrastive
 from .model.loss import ProsodyPredictorLoss
-from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, OriginalDatasetWithSentiment
+from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, DatasetWithSentimentContrastive2, OriginalDatasetWithSentiment
 
-from .evaluate_prosody_predictor import evaluate
+from .evaluate_prosody_predictor_contrastive2 import evaluate
 
 def get_model_train(model_config: ModelConfig,
               dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
@@ -127,7 +127,7 @@ def main():
     print("Prepare training ...")
 
     # Get dataset
-    dataset = DatasetWithSentimentContrastive(
+    dataset = DatasetWithSentimentContrastive2(
         dataset_path_config=dataset_config.path_config,
         dataset_preprocessing_config=dataset_config.preprocessing_config,
         split=DatasetSplit.TRAIN,
@@ -153,10 +153,10 @@ def main():
     )
     model = nn.DataParallel(model_raw)
     num_param = get_param_num(model)
-    loss_func: ProsodyPredictorContrastiveLoss = ProsodyPredictorContrastiveLoss(
+    loss_func: ProsodyPredictorContrastiveLoss2 = ProsodyPredictorContrastiveLoss2(
         dataset_config.feature_properties_config,
         lambda_neg=train_config.loss_config.lambda_neg,
-        lambda_pos=train_config.loss_config.lambda_pos
+        lambda_pos=train_config.loss_config.lambda_pos,
     ).to(device)
     print("Number of Prosody Predictor Parameters:", num_param)
 
@@ -186,22 +186,30 @@ def main():
     while True:
         epoch_bar = tqdm(total=len(loader), desc="Epoch {}".format(epoch), position=1, dynamic_ncols=True)
         epoch_bar.n = 1
-        from viztracer import VizTracer
+        for batch_std, batch_neg, batch_pos in loader:
 
-        tracer = VizTracer()
-        tracer.start()
-        for batch, contrastive_mask in loader:
-
-            batch: DataBatch = batch
-            batch_torch: DataBatchTorch = batch.to_torch(device)
-
-            contrastive_mask: torch.Tensor = torch.from_numpy(contrastive_mask).to(device)
+            batch_std: DataBatch = batch_std
+            batch_neg: DataBatch = batch_neg
+            batch_pos: DataBatch = batch_pos
+            
+            batch_std_torch: DataBatchTorch = batch_std.to_torch(device)
+            batch_neg_torch: DataBatchTorch = batch_neg.to_torch(device)
+            batch_pos_torch: DataBatchTorch = batch_pos.to_torch(device)
 
             # Forward
-            output: ProsodyPredictorOutput = model(batch_torch)
+            output_std: ProsodyPredictorOutput = model(batch_std_torch)
+            output_neg: ProsodyPredictorOutput = model(batch_neg_torch)
+            output_pos: ProsodyPredictorOutput = model(batch_pos_torch)
 
             # Cal Loss
-            losses: ProsodyPredictorContrastiveLossResult = loss_func(batch_torch, output, contrastive_mask)
+            losses: ProsodyPredictorContrastiveLossResult = loss_func(
+                batch_std_torch,
+                output_std,
+                batch_neg_torch,
+                output_neg,
+                batch_pos_torch,
+                output_pos
+            )
             total_loss = losses.total_loss
 
             # Backward
@@ -240,6 +248,7 @@ def main():
                     step,
                     batch_size,
                     dataset_config,
+                    train_config.loss_config,
                     val_logger,
                     device)
                 with open(os.path.join(val_log_path, "log.txt"), "a", encoding="utf-8") as f:
@@ -278,13 +287,6 @@ def main():
             total_step_bar.update(1)
 
             epoch_bar.update(1)
-
-            if step == 10:
-                tracer.stop()
-                tracer.save(output_file="trace.json") # also takes output_file as an optional argument
-                quit()
-
-
         epoch += 1
 
 

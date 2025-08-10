@@ -132,7 +132,7 @@ class FastSpeech2Loss(nn.Module):
 class ProsodyPredictorContrastiveLoss(nn.Module):
     """ FastSpeech2 Loss """
 
-    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, lambda_neg: float = 0.00001, lambda_pos: float = 0.00001):
+    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, lambda_neg: float, lambda_pos: float):
         super(ProsodyPredictorContrastiveLoss, self).__init__()
 
         self.lambda_neg = lambda_neg
@@ -179,39 +179,39 @@ class ProsodyPredictorContrastiveLoss(nn.Module):
 
         # expand mask from [batch_size] to [batch_size, text_len] and then apply masked_select so wa can get a phone-level mask
         contrastive_mask_expanded_text_level = contrastive_mask.unsqueeze(-1).expand(-1, text_masks.shape[1])
-        contrastive_mask_expanded_text_level = contrastive_mask_expanded_text_level.masked_select(text_masks)
+        contrastive_mask_expanded_text_level_selected = contrastive_mask_expanded_text_level.masked_select(text_masks)
         # expand mask from [batch_size] to [batch_size, mel_len] and then apply masked_select so we can get a frame-level mask
         if frame_masks is not None:
             contrastive_mask_expanded_frame_level = contrastive_mask.unsqueeze(-1).expand(-1, frame_masks.shape[1])
-            contrastive_mask_expanded_frame_level = contrastive_mask_expanded_frame_level.masked_select(~frame_masks)
+            contrastive_mask_expanded_frame_level_selected = contrastive_mask_expanded_frame_level.masked_select(~frame_masks)
         else:
-            contrastive_mask_expanded_frame_level = None
+            contrastive_mask_expanded_frame_level_selected = None
 
         if self.pitch_feature_level == "phoneme_level":
-            pitch_contrastive_mask = contrastive_mask_expanded_text_level
+            pitch_contrastive_mask = contrastive_mask_expanded_text_level_selected
             pitch_predictions = pitch_predictions.masked_select(text_masks)
             pitch_targets = pitch_targets.masked_select(text_masks)
         elif self.pitch_feature_level == "frame_level":
             assert frame_masks is not None, "frame_masks is None for frame level pitch feature"
-            pitch_contrastive_mask = contrastive_mask_expanded_frame_level 
+            pitch_contrastive_mask = contrastive_mask_expanded_frame_level_selected
             pitch_predictions = pitch_predictions.masked_select(~frame_masks)
             pitch_targets = pitch_targets.masked_select(~frame_masks)
         else:
             raise ValueError(f"Invalid pitch feature level: {self.pitch_feature_level}")
 
         if self.energy_feature_level == "phoneme_level":
-            energy_contrastive_mask = contrastive_mask_expanded_text_level
+            energy_contrastive_mask = contrastive_mask_expanded_text_level_selected
             energy_predictions = energy_predictions.masked_select(text_masks)
             energy_targets = energy_targets.masked_select(text_masks)
         elif self.energy_feature_level == "frame_level":
             assert frame_masks is not None, "frame_masks is None for frame level energy feature"
-            energy_contrastive_mask = contrastive_mask_expanded_frame_level
+            energy_contrastive_mask = contrastive_mask_expanded_frame_level_selected
             energy_predictions = energy_predictions.masked_select(~frame_masks)
             energy_targets = energy_targets.masked_select(~frame_masks)
         else:
             raise ValueError(f"Invalid energy feature level: {self.energy_feature_level}")
 
-        duration_contrastive_mask = contrastive_mask_expanded_text_level
+        duration_contrastive_mask = contrastive_mask_expanded_text_level_selected
         log_duration_predictions = log_duration_predictions.masked_select(text_masks)
         log_duration_targets = log_duration_targets.masked_select(text_masks)
 
@@ -220,18 +220,26 @@ class ProsodyPredictorContrastiveLoss(nn.Module):
         duration_loss_raw = self.mse_loss(log_duration_predictions, log_duration_targets)
 
         # mask 0: std_loss, mask -1: negative contrastive loss, mask 1: positive contrastive loss
+        pitch_loss_raw_std = pitch_loss_raw[pitch_contrastive_mask == 0]
+        energy_loss_raw_std = energy_loss_raw[energy_contrastive_mask == 0]
+        duration_loss_raw_std = duration_loss_raw[duration_contrastive_mask == 0]
+        pitch_loss_std = torch.mean(pitch_loss_raw_std, dim=0)
+        energy_loss_std = torch.mean(energy_loss_raw_std, dim=0)
+        duration_loss_std = torch.mean(duration_loss_raw_std, dim=0)
 
-        pitch_loss_std = torch.mean(pitch_loss_raw[pitch_contrastive_mask == 0], dim=0)
-        energy_loss_std = torch.mean(energy_loss_raw[energy_contrastive_mask == 0], dim=0)
-        duration_loss_std = torch.mean(duration_loss_raw[duration_contrastive_mask == 0], dim=0)
+        pitch_loss_raw_neg = pitch_loss_raw[pitch_contrastive_mask == -1]
+        energy_loss_raw_neg = energy_loss_raw[energy_contrastive_mask == -1]
+        duration_loss_raw_neg = duration_loss_raw[duration_contrastive_mask == -1]
+        pitch_loss_neg = torch.mean(pitch_loss_raw_neg, dim=0)
+        energy_loss_neg = torch.mean(energy_loss_raw_neg, dim=0)
+        duration_loss_neg = torch.mean(duration_loss_raw_neg, dim=0)
 
-        pitch_loss_neg = torch.mean(pitch_loss_raw[pitch_contrastive_mask == -1], dim=0)
-        energy_loss_neg = torch.mean(energy_loss_raw[energy_contrastive_mask == -1], dim=0)
-        duration_loss_neg = torch.mean(duration_loss_raw[duration_contrastive_mask == -1], dim=0)
-
-        pitch_loss_pos = torch.mean(pitch_loss_raw[pitch_contrastive_mask == 1], dim=0)
-        energy_loss_pos = torch.mean(energy_loss_raw[energy_contrastive_mask == 1], dim=0)
-        duration_loss_pos = torch.mean(duration_loss_raw[duration_contrastive_mask == 1], dim=0)
+        pitch_loss_raw_pos = pitch_loss_raw[pitch_contrastive_mask == 1]
+        energy_loss_raw_pos = energy_loss_raw[energy_contrastive_mask == 1]
+        duration_loss_raw_pos = duration_loss_raw[duration_contrastive_mask == 1]
+        pitch_loss_pos = torch.mean(pitch_loss_raw_pos, dim=0)
+        energy_loss_pos = torch.mean(energy_loss_raw_pos, dim=0)
+        duration_loss_pos = torch.mean(duration_loss_raw_pos, dim=0)
 
         pitch_loss_std = torch.nan_to_num(pitch_loss_std, nan=0.0)
         energy_loss_std = torch.nan_to_num(energy_loss_std, nan=0.0)
@@ -270,6 +278,255 @@ class ProsodyPredictorContrastiveLoss(nn.Module):
         )
 
         return result
+
+    # def forward(self, inputs: DataBatchTorch, predictions: ProsodyPredictorOutput, contrastive_mask: torch.Tensor) -> ProsodyPredictorContrastiveLossResult:
+    #     assert inputs.pitches is not None, "pitch_targets is None"
+    #     assert inputs.energies is not None, "energy_targets is None"
+    #     assert inputs.durations is not None, "duration_targets is None"
+
+    #     pitch_targets = inputs.pitches
+    #     energy_targets = inputs.energies
+    #     duration_targets = inputs.durations
+
+    #     pitch_predictions = predictions.pitch_predictions
+    #     energy_predictions = predictions.energy_predictions
+    #     log_duration_predictions = predictions.log_duration_predictions
+    #     text_masks = predictions.text_masks
+    #     frame_masks = predictions.frame_masks
+        
+    #     text_masks = ~text_masks
+    #     log_duration_targets = torch.log(duration_targets.float() + 1)
+
+    #     log_duration_targets.requires_grad = False
+    #     pitch_targets.requires_grad = False
+    #     energy_targets.requires_grad = False
+
+
+    #     assert self.pitch_feature_level == "phoneme_level", "ProsodyPredictorContrastiveLoss only supports phoneme level pitch feature"
+    #     assert self.energy_feature_level == "phoneme_level", "ProsodyPredictorContrastiveLoss only supports phoneme level energy feature"
+
+    #     # loss std duration
+    #     contrastive_mask_std = contrastive_mask == 0
+
+    #     contrastive_std_text_mask = text_masks[contrastive_mask_std]
+    #     contrastive_std_log_duration_targets = log_duration_targets[contrastive_mask_std]
+    #     contrastive_std_duration_pred = log_duration_predictions[contrastive_mask_std]
+
+    #     contrastive_std_log_duration_targets_selected = contrastive_std_log_duration_targets.masked_select(contrastive_std_text_mask)
+    #     contrastive_std_duration_pred_selected = contrastive_std_duration_pred.masked_select(contrastive_std_text_mask)
+
+    #     contrastive_std_loss_duration = self.mse_loss(contrastive_std_duration_pred_selected, contrastive_std_log_duration_targets_selected)
+    #     contrastive_std_loss_duration_mean = torch.mean(contrastive_std_loss_duration, dim=0)
+
+    #     # loss neg duration
+    #     contrastive_mask_neg = contrastive_mask == -1
+
+    #     contrastive_neg_text_mask = text_masks[contrastive_mask_neg]
+    #     contrastive_neg_log_duration_targets = log_duration_targets[contrastive_mask_neg]
+    #     contrastive_neg_duration_pred = log_duration_predictions[contrastive_mask_neg]
+
+    #     contrastive_neg_log_duration_targets_selected = contrastive_neg_log_duration_targets.masked_select(contrastive_neg_text_mask)
+    #     contrastive_neg_duration_pred_selected = contrastive_neg_duration_pred.masked_select(contrastive_neg_text_mask)
+
+    #     contrastive_neg_loss_duration = self.mse_loss(contrastive_neg_duration_pred_selected, contrastive_neg_log_duration_targets_selected)
+    #     contrastive_neg_loss_duration_mean = torch.mean(contrastive_neg_loss_duration, dim=0)
+
+    #     # loss pos duration
+    #     contrastive_mask_pos = contrastive_mask == 1
+
+    #     contrastive_pos_text_mask = text_masks[contrastive_mask_pos]
+    #     contrastive_pos_log_duration_targets = log_duration_targets[contrastive_mask_pos]
+    #     contrastive_pos_duration_pred = log_duration_predictions[contrastive_mask_pos]
+
+    #     contrastive_pos_log_duration_targets_selected = contrastive_pos_log_duration_targets.masked_select(contrastive_pos_text_mask)
+    #     contrastive_pos_duration_pred_selected = contrastive_pos_duration_pred.masked_select(contrastive_pos_text_mask)
+
+    #     contrastive_pos_loss_duration = self.mse_loss(contrastive_pos_duration_pred_selected, contrastive_pos_log_duration_targets_selected)
+    #     contrastive_pos_loss_duration_mean = torch.mean(contrastive_pos_loss_duration, dim=0)
+
+
+    #     # loss std pitch
+    #     contrastive_mask_std = contrastive_mask == 0
+    #     contrastive_std_text_mask = text_masks[contrastive_mask_std]
+    #     contrastive_std_pitch_targets = pitch_targets[contrastive_mask_std]
+    #     contrastive_std_pitch_predictions = pitch_predictions[contrastive_mask_std]
+
+    #     contrastive_std_pitch_targets_selected = contrastive_std_pitch_targets.masked_select(contrastive_std_text_mask)
+    #     contrastive_std_pitch_predictions_selected = contrastive_std_pitch_predictions.masked_select(contrastive_std_text_mask)
+
+    #     contrastive_std_loss_pitch = self.mse_loss(contrastive_std_pitch_predictions_selected, contrastive_std_pitch_targets_selected)
+    #     contrastive_std_loss_pitch_mean = torch.mean(contrastive_std_loss_pitch, dim=0)
+        
+    #     # loss neg pitch
+    #     contrastive_mask_neg = contrastive_mask == -1
+
+    #     contrastive_neg_text_mask = text_masks[contrastive_mask_neg]
+    #     contrastive_neg_pitch_targets = pitch_targets[contrastive_mask_neg]
+    #     contrastive_neg_pitch_predictions = pitch_predictions[contrastive_mask_neg]
+
+    #     contrastive_neg_pitch_targets_selected = contrastive_neg_pitch_targets.masked_select(contrastive_neg_text_mask)
+    #     contrastive_neg_pitch_predictions_selected = contrastive_neg_pitch_predictions.masked_select(contrastive_neg_text_mask)
+
+    #     contrastive_neg_loss_pitch = self.mse_loss(contrastive_neg_pitch_predictions_selected, contrastive_neg_pitch_targets_selected)
+    #     contrastive_neg_loss_pitch_mean = torch.mean(contrastive_neg_loss_pitch, dim=0)
+
+    #     # loss pos pitch
+    #     contrastive_mask_pos = contrastive_mask == 1
+
+    #     contrastive_pos_text_mask = text_masks[contrastive_mask_pos]
+    #     contrastive_pos_pitch_targets = pitch_targets[contrastive_mask_pos]
+    #     contrastive_pos_pitch_predictions = pitch_predictions[contrastive_mask_pos]
+
+    #     contrastive_pos_pitch_targets_selected = contrastive_pos_pitch_targets.masked_select(contrastive_pos_text_mask)
+    #     contrastive_pos_pitch_predictions_selected = contrastive_pos_pitch_predictions.masked_select(contrastive_pos_text_mask)
+
+    #     contrastive_pos_loss_pitch = self.mse_loss(contrastive_pos_pitch_predictions_selected, contrastive_pos_pitch_targets_selected)
+    #     contrastive_pos_loss_pitch_mean = torch.mean(contrastive_pos_loss_pitch, dim=0)
+
+    #     # loss std energy
+    #     contrastive_mask_std = contrastive_mask == 0
+
+    #     contrastive_std_text_mask = text_masks[contrastive_mask_std]
+    #     contrastive_std_energy_targets = energy_targets[contrastive_mask_std]
+    #     contrastive_std_energy_predictions = energy_predictions[contrastive_mask_std]
+
+    #     contrastive_std_energy_targets_selected = contrastive_std_energy_targets.masked_select(contrastive_std_text_mask)
+    #     contrastive_std_energy_predictions_selected = contrastive_std_energy_predictions.masked_select(contrastive_std_text_mask)
+
+    #     contrastive_std_loss_energy = self.mse_loss(contrastive_std_energy_predictions_selected, contrastive_std_energy_targets_selected)
+    #     contrastive_std_loss_energy_mean = torch.mean(contrastive_std_loss_energy, dim=0)
+
+    #     # loss neg energy
+    #     contrastive_mask_neg = contrastive_mask == -1
+
+    #     contrastive_neg_text_mask = text_masks[contrastive_mask_neg]
+    #     contrastive_neg_energy_targets = energy_targets[contrastive_mask_neg]
+    #     contrastive_neg_energy_predictions = energy_predictions[contrastive_mask_neg]
+
+    #     contrastive_neg_energy_targets_selected = contrastive_neg_energy_targets.masked_select(contrastive_neg_text_mask)
+    #     contrastive_neg_energy_predictions_selected = contrastive_neg_energy_predictions.masked_select(contrastive_neg_text_mask)
+
+    #     contrastive_neg_loss_energy = self.mse_loss(contrastive_neg_energy_predictions_selected, contrastive_neg_energy_targets_selected)
+    #     contrastive_neg_loss_energy_mean = torch.mean(contrastive_neg_loss_energy, dim=0)
+
+    #     # loss pos energy
+    #     contrastive_mask_pos = contrastive_mask == 1
+
+    #     contrastive_pos_text_mask = text_masks[contrastive_mask_pos]
+    #     contrastive_pos_energy_targets = energy_targets[contrastive_mask_pos]
+    #     contrastive_pos_energy_predictions = energy_predictions[contrastive_mask_pos]
+
+    #     contrastive_pos_energy_targets_selected = contrastive_pos_energy_targets.masked_select(contrastive_pos_text_mask)
+    #     contrastive_pos_energy_predictions_selected = contrastive_pos_energy_predictions.masked_select(contrastive_pos_text_mask)
+
+    #     contrastive_pos_loss_energy = self.mse_loss(contrastive_pos_energy_predictions_selected, contrastive_pos_energy_targets_selected)
+    #     contrastive_pos_loss_energy_mean = torch.mean(contrastive_pos_loss_energy, dim=0)
+
+    #     # combine losses
+
+    #     pitch_loss = contrastive_std_loss_pitch_mean + -self.lambda_neg * contrastive_neg_loss_pitch_mean + self.lambda_pos * contrastive_pos_loss_pitch_mean
+    #     energy_loss = contrastive_std_loss_energy_mean + -self.lambda_neg * contrastive_neg_loss_energy_mean + self.lambda_pos * contrastive_pos_loss_energy_mean
+    #     duration_loss = contrastive_std_loss_duration_mean + -self.lambda_neg * contrastive_neg_loss_duration_mean + self.lambda_pos * contrastive_pos_loss_duration_mean
+
+    #     total_loss = (
+    #         duration_loss + pitch_loss + energy_loss
+    #     )
+
+    #     result = ProsodyPredictorContrastiveLossResult(
+    #         pitch_loss_std=contrastive_std_loss_pitch_mean,
+    #         energy_loss_std=contrastive_std_loss_energy_mean,
+    #         duration_loss_std=contrastive_std_loss_duration_mean,
+    #         pitch_loss_neg=contrastive_neg_loss_pitch_mean,
+    #         energy_loss_neg=contrastive_neg_loss_energy_mean,
+    #         duration_loss_neg=contrastive_neg_loss_duration_mean,
+    #         pitch_loss_pos=contrastive_pos_loss_pitch_mean,
+    #         energy_loss_pos=contrastive_pos_loss_energy_mean,
+    #         duration_loss_pos=contrastive_pos_loss_duration_mean,
+    #         pitch_loss=pitch_loss,
+    #         energy_loss=energy_loss,
+    #         duration_loss=duration_loss,
+    #         total_loss=total_loss,
+    #     )
+
+    #     return result
+    
+
+
+
+
+class ProsodyPredictorContrastiveLoss2(nn.Module):
+    """ FastSpeech2 Loss """
+
+    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, lambda_neg: float, lambda_pos: float):
+        super(ProsodyPredictorContrastiveLoss2, self).__init__()
+
+        self.lambda_neg = lambda_neg
+        self.lambda_pos = lambda_pos
+
+        self.loss_func = ProsodyPredictorLoss(dataset_feature_properties_config)
+
+    def forward(self, inputs_std: DataBatchTorch, predictions_std: ProsodyPredictorOutput,
+                inputs_neg: DataBatchTorch, predictions_neg: ProsodyPredictorOutput,
+                inputs_pos: DataBatchTorch, predictions_pos: ProsodyPredictorOutput,
+                ) -> ProsodyPredictorContrastiveLossResult:
+        
+        assert inputs_std.pitches is not None, "pitch_targets is None"
+        assert inputs_std.energies is not None, "energy_targets is None"
+        assert inputs_std.durations is not None, "duration_targets is None"
+
+        assert inputs_neg.pitches is not None, "neg pitch_targets is None"
+        assert inputs_neg.energies is not None, "neg energy_targets is None"
+        assert inputs_neg.durations is not None, "neg duration_targets is None"
+
+        assert inputs_pos.pitches is not None, "pos pitch_targets is None"
+        assert inputs_pos.energies is not None, "pos energy_targets is None"
+        assert inputs_pos.durations is not None, "pos duration_targets is None"
+
+        # Calculate losses for standard inputs
+        result_std = self.loss_func(inputs_std, predictions_std)
+        pitch_loss_std = result_std.pitch_loss
+        energy_loss_std = result_std.energy_loss
+        duration_loss_std = result_std.duration_loss
+
+        # Calculate losses for negative inputs
+        result_neg = self.loss_func(inputs_neg, predictions_neg)
+        pitch_loss_neg = result_neg.pitch_loss
+        energy_loss_neg = result_neg.energy_loss
+        duration_loss_neg = result_neg.duration_loss
+
+        # Calculate losses for positive inputs
+        result_pos = self.loss_func(inputs_pos, predictions_pos)
+        pitch_loss_pos = result_pos.pitch_loss
+        energy_loss_pos = result_pos.energy_loss
+        duration_loss_pos = result_pos.duration_loss
+
+        # Combine losses
+        pitch_loss = pitch_loss_std + -self.lambda_neg * pitch_loss_neg + self.lambda_pos * pitch_loss_pos
+        energy_loss = energy_loss_std + -self.lambda_neg * energy_loss_neg + self.lambda_pos * energy_loss_pos
+        duration_loss = duration_loss_std + -self.lambda_neg * duration_loss_neg + self.lambda_pos * duration_loss_pos
+
+        total_loss = (
+            duration_loss + pitch_loss + energy_loss
+        )
+
+        result = ProsodyPredictorContrastiveLossResult(
+            pitch_loss_std=pitch_loss_std,
+            energy_loss_std=energy_loss_std,
+            duration_loss_std=duration_loss_std,
+            pitch_loss_neg=pitch_loss_neg,
+            energy_loss_neg=energy_loss_neg,
+            duration_loss_neg=duration_loss_neg,
+            pitch_loss_pos=pitch_loss_pos,
+            energy_loss_pos=energy_loss_pos,
+            duration_loss_pos=duration_loss_pos,
+            pitch_loss=pitch_loss,
+            energy_loss=energy_loss,
+            duration_loss=duration_loss,
+            total_loss=total_loss,
+        )
+
+        return result
+        
         
 class ProsodyPredictorLoss(nn.Module):
     """ FastSpeech2 Loss """

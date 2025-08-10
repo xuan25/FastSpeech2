@@ -580,30 +580,61 @@ class TrainOptimizerConfig:
             anneal_rate=config_dict['anneal_rate']
         )
     
+class LossConfig:
+    def __init__(
+        self,
+        lambda_neg: float,
+        lambda_pos: float
+    ):
+        self.lambda_neg = lambda_neg
+        self.lambda_pos = lambda_pos
+    def __repr__(self):
+        return (
+            "LossConfig( \n"
+            f"    lambda_neg={self.lambda_neg}, \n"
+            f"    lambda_pos={self.lambda_pos})"
+        )
+    def to_dict(self):
+        return {
+            "lambda_neg": self.lambda_neg,
+            "lambda_pos": self.lambda_pos
+        }
+    
+    @classmethod
+    def from_dict(cls, config_dict: dict):
+        return cls(
+            lambda_neg=config_dict['lambda_neg'],
+            lambda_pos=config_dict['lambda_pos']
+        )
+    
 class TrainConfig:
     def __init__(
         self,
         output_config: TrainOutputConfig,
         optimizer_config: TrainOptimizerConfig,
-        step_config: TrainStepConfig
+        step_config: TrainStepConfig,
+        loss_config: LossConfig
     ):
         self.output_config = output_config
         self.optimizer_config = optimizer_config
         self.step_config = step_config
+        self.loss_config = loss_config
 
     def __repr__(self):
         return (
             "TrainConfig( \n"
             f"  output_config={self.output_config}, \n"
             f"  optimizer_config={self.optimizer_config}, \n"
-            f"  step_config={self.step_config})"
+            f"  step_config={self.step_config}, \n"
+            f"  loss_config={self.loss_config})"
         )
 
     def to_dict(self):
         return {
             "output": self.output_config.to_dict(),
             "optimizer_config": self.optimizer_config.to_dict(),
-            "step_config": self.step_config.to_dict()
+            "step_config": self.step_config.to_dict(),
+            "loss_config": self.loss_config.to_dict()
         }
 
 
@@ -612,8 +643,9 @@ class TrainConfig:
         output_config = TrainOutputConfig.from_dict(config_dict['output'])
         optimizer_config = TrainOptimizerConfig.from_dict(config_dict['optimizer'])
         step_config = TrainStepConfig.from_dict(config_dict['step'])
-        
-        return cls(output_config, optimizer_config, step_config)
+        loss_config = LossConfig.from_dict(config_dict['loss'])
+
+        return cls(output_config, optimizer_config, step_config, loss_config)
 
     @classmethod
     def load_from_yaml(cls, yaml_file: str):

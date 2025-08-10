@@ -10,8 +10,8 @@ from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from .model.data_models import ProsodyPredictorContrastiveLossResult, ProsodyPredictorLossResult
 from .model.prosody_predictor import ProsodyPredictor, ProsodyPredictorOutput
 from .utils.tools import log_prosody_predictor, log_prosody_predictor_contrastive
-from .model.loss import ProsodyPredictorContrastiveLoss, ProsodyPredictorLoss
-from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, OriginalDatasetWithSentiment
+from .model.loss import ProsodyPredictorContrastiveLoss, ProsodyPredictorContrastiveLoss2, ProsodyPredictorLoss
+from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, DatasetWithSentimentContrastive2, OriginalDatasetWithSentiment
 
 
 def get_model_infer(ckpt_path, 
@@ -35,9 +35,9 @@ def get_dataset_loader(
     dataset_config: DatasetConfig,
     batch_size: int,
     device: str | torch.device = "cpu",
-) -> tuple[DatasetWithSentimentContrastive, DataLoader]:
+) -> tuple[DatasetWithSentimentContrastive2, DataLoader]:
     # Get dataset
-    dataset = DatasetWithSentimentContrastive(
+    dataset = DatasetWithSentimentContrastive2(
         dataset_path_config=dataset_config.path_config,
         dataset_preprocessing_config=dataset_config.preprocessing_config,
         split=DatasetSplit.VAL,
@@ -56,7 +56,7 @@ def get_dataset_loader(
 def evaluate(model, step,
              batch_size,
              dataset_config: DatasetConfig,
-                loss_config: LossConfig,
+             loss_config: LossConfig,
              logger=None, device: str | torch.device="cpu"):
 
     # Get dataset
@@ -77,8 +77,10 @@ def evaluate(model, step,
     dataset, loader = get_dataset_loader(dataset_config, batch_size, device)
 
     # Get loss function
-    loss_func = ProsodyPredictorContrastiveLoss(dataset_config.feature_properties_config, 
-                                                loss_config.lambda_neg, loss_config.lambda_pos).to(device)
+    loss_func = ProsodyPredictorContrastiveLoss2(dataset_config.feature_properties_config,
+                                                 lambda_neg=loss_config.lambda_neg,
+                                                 lambda_pos=loss_config.lambda_pos
+                                                 ).to(device)
 
     # Evaluation
     loss_sums = ProsodyPredictorContrastiveLossResult(
@@ -99,37 +101,42 @@ def evaluate(model, step,
     
     batch_torch: DataBatchTorch|None = None
     output: ProsodyPredictorOutput|None = None
-    for batch, contrastive_mask in loader:
-        batch: DataBatch = batch
-        batch_torch = batch.to_torch(device)
+    for batch_std, batch_neg, batch_pos in loader:
+        batch_std: DataBatch = batch_std
+        batch_neg: DataBatch = batch_neg
+        batch_pos: DataBatch = batch_pos
 
-        contrastive_mask: torch.Tensor = torch.from_numpy(contrastive_mask).to(device)
+        batch_std_torch = batch_std.to_torch(device)
+        batch_neg_torch = batch_neg.to_torch(device)
+        batch_pos_torch = batch_pos.to_torch(device)
 
         with torch.no_grad():
             # Forward
-            output = model(batch_torch)
+            output_std = model(batch_std_torch)
+            output_neg = model(batch_neg_torch)
+            output_pos = model(batch_pos_torch)
 
             # Cal Loss
-            losses: ProsodyPredictorContrastiveLossResult = loss_func(batch_torch, output, contrastive_mask)
-
-            batch_size_std = (contrastive_mask == 0).sum().item()
-            # batch_size_neg = (contrastive_mask == -1).sum().item()
-            # batch_size_pos = (contrastive_mask == 1).sum().item()
+            losses: ProsodyPredictorContrastiveLossResult = loss_func(
+                batch_std_torch, output_std, 
+                batch_neg_torch, output_neg,
+                batch_pos_torch, output_pos
+            )
 
             # Accumulate loss
-            loss_sums.pitch_loss_std += losses.pitch_loss_std.item() * batch_size_std
-            loss_sums.energy_loss_std += losses.energy_loss_std.item() * batch_size_std
-            loss_sums.duration_loss_std += losses.duration_loss_std.item() * batch_size_std
-            loss_sums.pitch_loss_neg += losses.pitch_loss_neg.item() * batch_size_std
-            loss_sums.energy_loss_neg += losses.energy_loss_neg.item() * batch_size_std
-            loss_sums.duration_loss_neg += losses.duration_loss_neg.item() * batch_size_std
-            loss_sums.pitch_loss_pos += losses.pitch_loss_pos.item() * batch_size_std
-            loss_sums.energy_loss_pos += losses.energy_loss_pos.item() * batch_size_std
-            loss_sums.duration_loss_pos += losses.duration_loss_pos.item() * batch_size_std
-            loss_sums.pitch_loss += losses.pitch_loss.item() * batch_size_std
-            loss_sums.energy_loss += losses.energy_loss.item() * batch_size_std
-            loss_sums.duration_loss += losses.duration_loss.item() * batch_size_std
-            loss_sums.total_loss += losses.total_loss.item() * batch_size_std
+            loss_sums.pitch_loss_std += losses.pitch_loss_std.item() * batch_std_torch.batch_size
+            loss_sums.energy_loss_std += losses.energy_loss_std.item() * batch_std_torch.batch_size
+            loss_sums.duration_loss_std += losses.duration_loss_std.item() * batch_std_torch.batch_size
+            loss_sums.pitch_loss_neg += losses.pitch_loss_neg.item() * batch_std_torch.batch_size
+            loss_sums.energy_loss_neg += losses.energy_loss_neg.item() * batch_std_torch.batch_size
+            loss_sums.duration_loss_neg += losses.duration_loss_neg.item() * batch_std_torch.batch_size
+            loss_sums.pitch_loss_pos += losses.pitch_loss_pos.item() * batch_std_torch.batch_size
+            loss_sums.energy_loss_pos += losses.energy_loss_pos.item() * batch_std_torch.batch_size
+            loss_sums.duration_loss_pos += losses.duration_loss_pos.item() * batch_std_torch.batch_size
+            loss_sums.pitch_loss += losses.pitch_loss.item() * batch_std_torch.batch_size
+            loss_sums.energy_loss += losses.energy_loss.item() * batch_std_torch.batch_size
+            loss_sums.duration_loss += losses.duration_loss.item() * batch_std_torch.batch_size
+            loss_sums.total_loss += losses.total_loss.item() * batch_std_torch.batch_size
 
 
     loss_means = ProsodyPredictorContrastiveLossResult(

@@ -154,7 +154,9 @@ def main():
     model = nn.DataParallel(model_raw)
     num_param = get_param_num(model)
     loss_func: ProsodyPredictorContrastiveLoss = ProsodyPredictorContrastiveLoss(
-        dataset_config.feature_properties_config
+        dataset_config.feature_properties_config,
+        lambda_neg=train_config.loss_config.lambda_neg,
+        lambda_pos=train_config.loss_config.lambda_pos,
     ).to(device)
     print("Number of Prosody Predictor Parameters:", num_param)
 
@@ -234,6 +236,7 @@ def main():
                     step,
                     batch_size,
                     dataset_config,
+                    train_config.loss_config,
                     val_logger,
                     device)
                 with open(os.path.join(val_log_path, "log.txt"), "a", encoding="utf-8") as f:
