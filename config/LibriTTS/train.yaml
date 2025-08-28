@@ -19,3 +19,6 @@ step:
   synth_step: 1000
   val_step: 1000
   save_step: 10000
+loss:
+  lambda_neg: 0.0
+  lambda_pos: 0.0

@@ -7,6 +7,8 @@ import torch
 import tqdm
 from torch.utils.data import DataLoader
 
+from .model.fastspeech2 import FastSpeech2
+
 from .model.data_models import ProsodyPredictorOutput
 from .model.prosody_predictor import ProsodyPredictor
 
@@ -57,11 +59,28 @@ def get_model_infer(ckpt_path,
               dataset_feature_properties_config: DatasetFeaturePropertiesConfig,
               dataset_feature_stats: DatasetFeatureStats, 
               device) -> ProsodyPredictor:
+    # source
+    model_fs2 = FastSpeech2(
+        model_config=model_config,
+        dataset_feature_properties_config=dataset_feature_properties_config,
+        dataset_feature_stats=dataset_feature_stats,
+    ).to(device)
 
-    model = ProsodyPredictor(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
     if ckpt_path:
         ckpt = torch.load(ckpt_path)
-        model.load_state_dict(ckpt["model"])
+        model_fs2.load_state_dict(ckpt["model"])
+
+    # target
+    model = ProsodyPredictor(
+        model_config=model_config,
+        dataset_feature_properties_config=dataset_feature_properties_config,
+        dataset_feature_stats=dataset_feature_stats,
+    ).to(device)
+
+    # Copy weights from FastSpeech2 to ProsodyPredictor
+    model.encoder = model_fs2.encoder
+    model.variance_adaptor = model_fs2.variance_adaptor
+    model.speaker_emb = model_fs2.speaker_emb
 
     model.eval()
     # model.requires_grad_ = False

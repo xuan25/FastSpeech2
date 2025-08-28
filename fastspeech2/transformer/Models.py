@@ -79,8 +79,15 @@ class Encoder(nn.Module):
                 num_sentiments,
                 d_word_vec,
             )
+            # self.sentiment_emb_input = nn.Embedding(
+            #     num_sentiments,
+            #     d_word_vec,
+            #     _weight=torch.zeros(num_sentiments, d_word_vec),
+            #     _freeze=True
+            # )
+            # print(f"Warning: Initialized sentiment embedding with zeros for {num_sentiments} sentiments.")
 
-    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor, return_attns=False):
+    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, return_attns=False):
 
         enc_slf_attn_list = []
         batch_size, max_len = src_seq.shape[0], src_seq.shape[1]

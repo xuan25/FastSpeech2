@@ -202,3 +202,34 @@ class DatasetFeatureStats:
             energy_std=energy_std,
             n_speakers=n_speakers
         )
+    
+    def to_dict(self):
+        return {
+            "pitch": {
+                "min": self.pitch_min,
+                "max": self.pitch_max,
+                "mean": self.pitch_mean,
+                "std": self.pitch_std
+            },
+            "energy": {
+                "min": self.energy_min,
+                "max": self.energy_max,
+                "mean": self.energy_mean,
+                "std": self.energy_std
+            },
+            "n_speakers": self.n_speakers
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            pitch_min=data["pitch"]["min"],
+            pitch_max=data["pitch"]["max"],
+            pitch_mean=data["pitch"]["mean"],
+            pitch_std=data["pitch"]["std"],
+            energy_min=data["energy"]["min"],
+            energy_max=data["energy"]["max"],
+            energy_mean=data["energy"]["mean"],
+            energy_std=data["energy"]["std"],
+            n_speakers=data["n_speakers"]
+        )

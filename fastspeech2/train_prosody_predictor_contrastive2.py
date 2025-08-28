@@ -266,11 +266,11 @@ def main():
                         "steps": step,
                     },
                     "configs": {
-                        "dataset_config": dataset_config,
-                        "model_config": model_config,
-                        "train_config": train_config,
+                        "dataset_config": dataset_config.to_dict(),
+                        "model_config": model_config.to_dict(),
+                        "train_config": train_config.to_dict(),
                     },
-                    "dataset_feature_stats": dataset_feature_stats,
+                    "dataset_feature_stats": dataset_feature_stats.to_dict(),
                 }
                     
                 torch.save(

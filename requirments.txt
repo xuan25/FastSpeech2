@@ -8,3 +8,4 @@ inflect
 matplotlib
 scipy
 g2p_en
+adjustText

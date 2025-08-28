@@ -96,10 +96,10 @@ def log_prosody_predictor(
     logger, step=None, losses: ProsodyPredictorLossResult | None=None
 ):
     if losses is not None:
-        logger.add_scalar("Loss/total_loss", losses.total_loss, step)
-        logger.add_scalar("Loss/pitch_loss", losses.pitch_loss, step)
-        logger.add_scalar("Loss/energy_loss", losses.energy_loss, step)
-        logger.add_scalar("Loss/duration_loss", losses.duration_loss, step)
+        logger.add_scalar("Loss/total_loss_std", losses.total_loss, step)
+        logger.add_scalar("Loss/pitch_loss_std", losses.pitch_loss, step)
+        logger.add_scalar("Loss/energy_loss_std", losses.energy_loss, step)
+        logger.add_scalar("Loss/duration_loss_std", losses.duration_loss, step)
 
 def log_prosody_predictor_contrastive(
     logger, step=None, losses: ProsodyPredictorContrastiveLossResult | None=None

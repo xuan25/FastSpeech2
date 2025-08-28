@@ -8,19 +8,17 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from tqdm import tqdm
 
-from fastspeech2.model.data_models import ProsodyPredictorContrastiveLossResult
-
 from .dataset.datasetfs import DatasetFS
 
 from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, TrainConfig, TrainOptimizerConfig
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from .model.prosody_predictor import ProsodyPredictor, ProsodyPredictorOutput
-from .model.loss import ProsodyPredictorContrastiveLoss, ProsodyPredictorLossResult
+from .model.loss import ProsodyPredictorContrastiveLossResult
 from .model.optimizer import ScheduledOptim
 from .utils.model import get_param_num
-from .utils.tools import log_prosody_predictor, log_prosody_predictor_contrastive
-from .model.loss import ProsodyPredictorLoss
-from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, OriginalDatasetWithSentiment
+from .utils.tools import log_prosody_predictor_contrastive
+from .model.loss import ProsodyPredictorContrastiveLoss
+from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive
 
 from .evaluate_prosody_predictor_contrastive import evaluate
 
@@ -254,11 +252,11 @@ def main():
                         "steps": step,
                     },
                     "configs": {
-                        "dataset_config": dataset_config,
-                        "model_config": model_config,
-                        "train_config": train_config,
+                        "dataset_config": dataset_config.to_dict(),
+                        "model_config": model_config.to_dict(),
+                        "train_config": train_config.to_dict(),
                     },
-                    "dataset_feature_stats": dataset_feature_stats,
+                    "dataset_feature_stats": dataset_feature_stats.to_dict(),
                 }
                     
                 torch.save(

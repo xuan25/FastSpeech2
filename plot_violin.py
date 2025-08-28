@@ -30,14 +30,14 @@ import os
 
 # OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-0-reworked/pred/plots"
 
-DATA_FILE = [
-    "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val.csv",
-    "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_neg.csv",
-    "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_neu.csv",
-    "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_pos.csv",
-]
+# DATA_FILE = [
+#     "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_neg.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_neu.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/val_pos.csv",
+# ]
 
-OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/plots"
+# OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.001/pred/plots"
 
 
 # DATA_FILE = [
@@ -58,6 +58,36 @@ OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.0
 # ]
 
 # OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-reworked2-0.1/pred/plots"
+
+
+
+
+# DATA_FILE = [
+#     "output/prosody_predictor_contrastive/sentiment_input-0/pred/val.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv",
+# ]
+
+# OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-0/pred/plots"
+
+# DATA_FILE = [
+#     "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv",
+#     "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv",
+# ]
+
+# OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/plots"
+
+DATA_FILE = [
+    "output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val.csv",
+    "output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv",
+    "output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv",
+    "output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv",
+]
+
+OUTPUT_DIR = "output/prosody_predictor_contrastive/sentiment_input-0.1/pred/plots"
 
 
 
