@@ -36,7 +36,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val.csv", "pitch", "pitch", NEG, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/default-B/pred/val.csv", "pitch", "pitch", NEG, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val.csv", "pitch", "pitch", NEG, NEG),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEG, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEG, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val.csv", "pitch", "pitch", NEG, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val.csv", "pitch", "pitch", NEG, NEG),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val.csv", "pitch", "pitch", NEG, NEG),
 
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_gt/gt/pred/val.csv", "pitch", "pitch", NEU, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/fastspeech2/default/pred/val.csv", "pitch", "pitch", NEU, NEG),
@@ -48,7 +51,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val.csv", "pitch", "pitch", NEU, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/default-B/pred/val.csv", "pitch", "pitch", NEU, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val.csv", "pitch", "pitch", NEU, NEG),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEU, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEU, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val.csv", "pitch", "pitch", NEU, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val.csv", "pitch", "pitch", NEU, NEG),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val.csv", "pitch", "pitch", NEU, NEG),
 
 
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_gt/gt/pred/val.csv", "pitch", "pitch", NEU, NEU),
@@ -61,7 +67,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val.csv", "pitch", "pitch", NEU, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/default-B/pred/val.csv", "pitch", "pitch", NEU, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val.csv", "pitch", "pitch", NEU, NEU),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEU, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEU, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val.csv", "pitch", "pitch", NEU, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val.csv", "pitch", "pitch", NEU, NEU),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val.csv", "pitch", "pitch", NEU, NEU),
 
 
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_gt/gt/pred/val.csv", "pitch", "pitch", NEG, NEU),
@@ -74,7 +83,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val.csv", "pitch", "pitch", NEG, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/default-B/pred/val.csv", "pitch", "pitch", NEG, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val.csv", "pitch", "pitch", NEG, NEU),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEG, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv", "pitch", "pitch", NEG, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val.csv", "pitch", "pitch", NEG, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val.csv", "pitch", "pitch", NEG, NEU),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val.csv", "pitch", "pitch", NEG, NEU),
 
 
 
@@ -84,7 +96,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv", "pitch", "pitch", NEG, NEG),
 
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
@@ -92,7 +107,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv", "pitch", "pitch", NEU, NEG),
 
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
@@ -100,7 +118,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv", "pitch", "pitch", NEU, NEU),
 
 
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
@@ -109,7 +130,10 @@ tasks = [
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input-0-overrideembedding0-B/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
     # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
-    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
+    # Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
+    Task("output/prosody_predictor_gt/gt/pred/val.csv", "output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv", "pitch", "pitch", NEG, NEU),
 
 
 

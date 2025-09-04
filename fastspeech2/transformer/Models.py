@@ -55,6 +55,12 @@ class Encoder(nn.Module):
         self.max_seq_len = max_seq_len
         self.d_model = d_model
 
+        self.sentiment_mode = sentiment_mode
+
+        if sentiment_mode == "input_concat":
+            assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
+            d_word_vec -= num_sentiments
+
         self.src_word_emb = nn.Embedding(
             n_src_vocab, d_word_vec, padding_idx=Constants.PAD
         )
@@ -86,6 +92,14 @@ class Encoder(nn.Module):
             #     _freeze=True
             # )
             # print(f"Warning: Initialized sentiment embedding with zeros for {num_sentiments} sentiments.")
+        if sentiment_mode == "input_concat":
+            assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
+            orthogonal_weights = torch.eye(num_sentiments)
+            self.sentiment_emb_input = nn.Embedding(
+                num_sentiments,
+                num_sentiments,
+            )
+            self.sentiment_emb_input.weight.data = orthogonal_weights
 
     def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, return_attns=False):
 
@@ -108,10 +122,16 @@ class Encoder(nn.Module):
             ].expand(batch_size, -1, -1)
         
         if self.sentiment_emb_input is not None:
-            sentiment_emb = self.sentiment_emb_input(
-                sentiments
-            ).unsqueeze(1).expand(batch_size, max_len, -1)
-            enc_output = enc_output + sentiment_emb
+            if self.sentiment_mode == "input":
+                sentiment_emb = self.sentiment_emb_input(
+                    sentiments
+                ).unsqueeze(1).expand(batch_size, max_len, -1)
+                enc_output = enc_output + sentiment_emb
+            elif self.sentiment_mode == "input_concat":
+                sentiment_emb = self.sentiment_emb_input(
+                    sentiments
+                ).unsqueeze(1).expand(batch_size, max_len, -1)
+                enc_output = torch.cat((enc_output, sentiment_emb), dim=-1)
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(

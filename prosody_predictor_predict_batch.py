@@ -4,51 +4,235 @@ from fastspeech2.predict_batch_prosody_predictor import process
 
 CONFIGS = [
 
-
     {
-        "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
-        "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv",
+        "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+        "output_path": "output/prosody_predictor/sentiment_input_concat/pred/train.csv",
         "dataset_config_path": "config/LibriTTS/dataset_sentiment.yaml",
-        "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
-        "data_split_name": "val",
+        "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+        "data_split_name": "train",
         "pitch_control": 1.0,
         "energy_control": 1.0,
         "duration_control": 1.0,
         "batch_size": 16
     },
     {
-        "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
-        "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neg.csv",
+        "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+        "output_path": "output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv",
         "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neg.yaml",
-        "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
-        "data_split_name": "val",
+        "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+        "data_split_name": "train",
         "pitch_control": 1.0,
         "energy_control": 1.0,
         "duration_control": 1.0,
         "batch_size": 16
     },
     {
-        "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
-        "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neu.csv",
+        "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+        "output_path": "output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv",
         "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neu.yaml",
-        "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
-        "data_split_name": "val",
+        "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+        "data_split_name": "train",
         "pitch_control": 1.0,
         "energy_control": 1.0,
         "duration_control": 1.0,
         "batch_size": 16
     },
     {
-        "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
-        "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_pos.csv",
+        "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+        "output_path": "output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv",
         "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_pos.yaml",
-        "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
-        "data_split_name": "val",
+        "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+        "data_split_name": "train",
         "pitch_control": 1.0,
         "energy_control": 1.0,
         "duration_control": 1.0,
         "batch_size": 16
     },
+
+
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_concat/pred/val.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neg.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neu.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_concat/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_pos.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+
+
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neg.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neu.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_pos.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+
+
+    
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neg.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neu.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_pos.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input_concat.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+
+
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neg.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neg.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_neu.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_neu.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
+    # {
+    #     "ckpt_path": "output/prosody_predictor/sentiment_input_overrideembedding0/ckpt/40000.pth",
+    #     "output_path": "output/prosody_predictor/sentiment_input_overrideembedding0/pred/val_pos.csv",
+    #     "dataset_config_path": "config/LibriTTS/dataset_sentiment_override_all_pos.yaml",
+    #     "model_config_path": "config/LibriTTS/model_sentiment_input.yaml",
+    #     "data_split_name": "val",
+    #     "pitch_control": 1.0,
+    #     "energy_control": 1.0,
+    #     "duration_control": 1.0,
+    #     "batch_size": 16
+    # },
 
 
     # {
