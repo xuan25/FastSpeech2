@@ -42,7 +42,7 @@ def pad_2D(inputs, maxlen=None):
 
 class DataSample:
 
-    def __init__(self, data_id: str, speaker: int, text: npt.NDArray[np.intp], raw_text: str, mel: npt.NDArray[np.float64] | None, pitch: npt.NDArray[np.float64] | None, energy: npt.NDArray[np.float64] | None, duration: npt.NDArray[np.float64] | None, sentiment: int | None):
+    def __init__(self, data_id: str, speaker: int, text: npt.NDArray[np.intp], raw_text: str, mel: npt.NDArray[np.float64] | None, pitch: npt.NDArray[np.float64] | None, energy: npt.NDArray[np.float64] | None, duration: npt.NDArray[np.float64] | None, sentiment: int | None, sentiments_source: int | None = None):
         self.data_id = data_id
         self.speaker = speaker
         self.text = text
@@ -52,6 +52,7 @@ class DataSample:
         self.energy = energy
         self.duration = duration
         self.sentiment = sentiment
+        self.sentiment_source = sentiments_source
 
     def __repr__(self):
         return f"DataSample(data_id={self.data_id}, speaker={self.speaker}, text={self.text}, raw_text={self.raw_text}, sentiment={self.sentiment}, mel={self.mel}, pitch={self.pitch}, energy={self.energy}, duration={self.duration})"
@@ -87,6 +88,7 @@ class DataBatch:
         self.energies: npt.NDArray[np.float64] | None = pad_1D([data_samples[idx].energy for idx in sample_idxs]) if data_samples[0].energy is not None else None
         self.durations: npt.NDArray[np.float64] | None = pad_1D([data_samples[idx].duration for idx in sample_idxs]) if data_samples[0].duration is not None else None
         self.sentiments: npt.NDArray[np.intp] | None = np.array([data_samples[idx].sentiment for idx in sample_idxs]) if data_samples[0].sentiment is not None else None
+        self.sentiments_source: npt.NDArray[np.intp] | None = np.array([data_samples[idx].sentiment_source for idx in sample_idxs]) if data_samples[0].sentiment_source is not None else None
 
         # sort samples the last
         self.data_samples = [data_samples[idx] for idx in sample_idxs]
@@ -137,6 +139,7 @@ class DataBatchTorch:
         self.energies = torch.from_numpy(data_batch.energies).to(device) if data_batch.energies is not None else None
         self.durations = torch.from_numpy(data_batch.durations).long().to(device) if data_batch.durations is not None else None
         self.sentiments = torch.from_numpy(data_batch.sentiments).long().to(device) if data_batch.sentiments is not None else None
+        self.sentiments_source = torch.from_numpy(data_batch.sentiments_source).long().to(device) if data_batch.sentiments_source is not None else None
         self.text_lens = torch.from_numpy(data_batch.text_lens).to(device)
         self.mel_lens = torch.from_numpy(data_batch.mel_lens).to(device) if data_batch.mel_lens is not None else None
         self.text_len_max = data_batch.text_len_max

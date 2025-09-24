@@ -164,7 +164,8 @@ class DatasetWithSentimentContrastive(Dataset):
             pitch=pitch,
             energy=energy,
             duration=duration,
-            sentiment=sentiment_label
+            sentiment=sentiment_label,
+            sentiments_source=sentiment_label,
         )
         return sample
     
@@ -189,7 +190,8 @@ class DatasetWithSentimentContrastive(Dataset):
             pitch=None,
             energy=None,
             duration=None,
-            sentiment=sentiment_label
+            sentiment=sentiment_label,
+            sentiments_source=sentiment_label,
         )
         return sample
     
@@ -206,7 +208,8 @@ class DatasetWithSentimentContrastive(Dataset):
             pitch=sample.pitch,
             energy=sample.energy,
             duration=sample.duration,
-            sentiment=(sample.sentiment + 1) % 3 if sample.sentiment is not None else None # simple negative sample generation by adding 1 to sentiment label
+            sentiment=(sample.sentiment + 1) % 3 if sample.sentiment is not None else None, # simple negative sample generation by adding 1 to sentiment label
+            sentiments_source=sample.sentiment_source
         )
 
         sample_neg2 = DataSample(
@@ -218,7 +221,8 @@ class DatasetWithSentimentContrastive(Dataset):
             pitch=sample.pitch,
             energy=sample.energy,
             duration=sample.duration,
-            sentiment=(sample.sentiment + 2) % 3 if sample.sentiment is not None else None # simple negative sample generation by adding 2 to sentiment label
+            sentiment=(sample.sentiment + 2) % 3 if sample.sentiment is not None else None, # simple negative sample generation by adding 2 to sentiment label
+            sentiments_source=sample.sentiment_source
         )
 
         # sample 2 positive samples form the same sentiment class
@@ -472,22 +476,22 @@ class DatasetWithSentimentContrastive2(Dataset):
             raise ValueError(f"Not enough samples for sentiment {sample.sentiment} to create contrastive samples")
         
         sample_pos1 = self.__load_data_sample_text(np.random.choice(sentiment_samples))
-        text_length_pos1 = min(sample_pos1.text.shape[0], sample.text.shape[0])
-        sample_pos1.text = sample_pos1.text[:text_length_pos1]  # ensure same length for contrastive learning, but keep the contrastive content
-        sample_pos1.duration = sample.duration[:text_length_pos1] if sample.duration is not None else None
-        sample_pos1.pitch = sample.pitch[:text_length_pos1] if sample.pitch is not None else None
-        sample_pos1.energy = sample.energy[:text_length_pos1] if sample.energy is not None else None
-        mel_length_pos1 = np.sum(sample_pos1.duration) if sample_pos1.duration is not None else 0
-        sample_pos1.mel = sample.mel[:mel_length_pos1] if sample.mel is not None else None
+        # text_length_pos1 = min(sample_pos1.text.shape[0], sample.text.shape[0])
+        # sample_pos1.text = sample_pos1.text[:text_length_pos1]  # ensure same length for contrastive learning, but keep the contrastive content
+        # sample_pos1.duration = sample.duration[:text_length_pos1] if sample.duration is not None else None
+        # sample_pos1.pitch = sample.pitch[:text_length_pos1] if sample.pitch is not None else None
+        # sample_pos1.energy = sample.energy[:text_length_pos1] if sample.energy is not None else None
+        # mel_length_pos1 = np.sum(sample_pos1.duration) if sample_pos1.duration is not None else 0
+        # sample_pos1.mel = sample.mel[:mel_length_pos1] if sample.mel is not None else None
 
         sample_pos2 = self.__load_data_sample(np.random.choice(sentiment_samples))
-        text_length_pos2 = min(sample_pos2.text.shape[0], sample.text.shape[0])
-        sample_pos2.text = sample_pos2.text[:text_length_pos2]  # ensure same length for contrastive learning, but keep the contrastive content
-        sample_pos2.duration = sample.duration[:text_length_pos2] if sample.duration is not None else None
-        sample_pos2.pitch = sample.pitch[:text_length_pos2] if sample.pitch is not None else None
-        sample_pos2.energy = sample.energy[:text_length_pos2] if sample.energy is not None else None
-        mel_length_pos2 = np.sum(sample_pos2.duration) if sample_pos2.duration is not None else 0
-        sample_pos2.mel = sample.mel[:mel_length_pos2] if sample.mel is not None else None
+        # text_length_pos2 = min(sample_pos2.text.shape[0], sample.text.shape[0])
+        # sample_pos2.text = sample_pos2.text[:text_length_pos2]  # ensure same length for contrastive learning, but keep the contrastive content
+        # sample_pos2.duration = sample.duration[:text_length_pos2] if sample.duration is not None else None
+        # sample_pos2.pitch = sample.pitch[:text_length_pos2] if sample.pitch is not None else None
+        # sample_pos2.energy = sample.energy[:text_length_pos2] if sample.energy is not None else None
+        # mel_length_pos2 = np.sum(sample_pos2.duration) if sample_pos2.duration is not None else 0
+        # sample_pos2.mel = sample.mel[:mel_length_pos2] if sample.mel is not None else None
 
         # the first sample is the original sample, the second and third sample is negative contrastive samples
         mask = np.array([0, -1, -1, 1, 1], dtype=np.int8)  # 0 for original, -1 for negative samples
@@ -638,7 +642,8 @@ class OriginalDatasetWithSentiment(Dataset):
             pitch=pitch,
             energy=energy,
             duration=duration,
-            sentiment=sentiment_label
+            sentiment=sentiment_label,
+            sentiments_source=sentiment_label,
         )
 
         return sample
@@ -730,7 +735,8 @@ class TextOnlyDatasetWithSentiment(Dataset):
             pitch=None,
             energy=None,
             duration=None,
-            sentiment=sentiment_label
+            sentiment=sentiment_label,
+            sentiments_source=sentiment_label,
         )
 
         return sample

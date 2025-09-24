@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import csv
+import math
 import os
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import Literal, cast
+from pathlib import Path
+from typing import Callable, Dict, List, Literal, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import wasserstein_distance
 from matplotlib.lines import Line2D
-
+from scipy.stats import wasserstein_distance
 
 # =========================
 # Sentiment Enum & Aliases
@@ -17,126 +21,152 @@ class Sentiment(IntEnum):
     NEU = 1
     POS = 2
 
-# 兼容旧常量名（可删）
 NEG, NEU, POS = Sentiment.NEG, Sentiment.NEU, Sentiment.POS
-SENT_NAMES = {Sentiment.NEG: "NEG", Sentiment.NEU: "NEU", Sentiment.POS: "POS"}
+SENT_NAMES: Dict[Sentiment, str] = {NEG: "NEG", NEU: "NEU", POS: "POS"}
 
 
 # =========================
 # Ground-truth mapping
 # =========================
-# SENTIMENTS_REF_FILE = "output/prosody_predictor_gt/gt/pred/val.csv"
-SENTIMENTS_REF_FILE = "output/prosody_predictor/sentiment_input_concat/pred/train.csv"
-sentiment_mapping: dict[str, int] = {}
-
-try:
-    with open(SENTIMENTS_REF_FILE, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # 行为：data_id -> 0/1/2
-            sentiment_mapping[row["data_id"]] = int(row["sentiment"])
-except FileNotFoundError:
-    print(f"Warning: Sentiment reference file not found: {SENTIMENTS_REF_FILE}")
-except (UnicodeDecodeError, csv.Error) as e:
-    print(f"Error reading sentiment reference file: {e}")
-
-
-def get_data_sentiment(data_id: str) -> int:
-    """返回 0/1/2；未知返回 -1。"""
-    return sentiment_mapping.get(data_id, -1)
+def load_sentiment_mapping(ref_csv: Path) -> Dict[str, int]:
+    mapping: Dict[str, int] = {}
+    try:
+        with ref_csv.open("r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    mapping[row["data_id"]] = int(row["sentiment"])
+                except (ValueError, KeyError):
+                    continue
+    except FileNotFoundError:
+        print(f"Warning: Sentiment reference file not found: {ref_csv}")
+    except (UnicodeDecodeError, csv.Error) as e:
+        print(f"Error reading sentiment reference file: {e}")
+    return mapping
 
 
 # =========================
 # Data containers
 # =========================
+@dataclass
 class Distribution:
-    def __init__(self, samples_file: str, sentiment_filter: Sentiment, feature: str):
-        self.samples_file = samples_file
-        self.sentiment_filter = Sentiment(sentiment_filter)
-        self.feature = feature
-        self.samples = self.load_data(samples_file, self.sentiment_filter, feature)
+    samples_file: Path
+    sentiment_filter: Sentiment
+    feature: str
+    mapping: Mapping[str, int]
 
-    def load_data(self, samples_file: str, sentiment_filter: Sentiment, feature: str):
-        data = []
+    _cached: Optional[np.ndarray] = None  # 内部缓存
+
+    def load_samples(self) -> np.ndarray:
+        """懒加载 + 缓存"""
+        if self._cached is not None:
+            return self._cached
+
+        data: list[float] = []
         try:
-            with open(samples_file, "r", encoding="utf-8") as file:
-                csv_reader = csv.DictReader(file)
+            with self.samples_file.open("r", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
                 kept = 0
                 total = 0
-                for data_row in csv_reader:
+                for row in reader:
                     total += 1
-                    if get_data_sentiment(data_row.get("data_id", "")) == int(sentiment_filter):
+                    sid = self.mapping.get(row.get("data_id", ""), -1)
+                    if sid == int(self.sentiment_filter):
                         try:
-                            data.append(float(data_row[feature]))
-                            kept += 1
-                        except (ValueError, KeyError) as e:
-                            print(f"Warning: Skipping invalid data in {samples_file}: {e}")
+                            v = float(row[self.feature])
+                            if math.isfinite(v):
+                                data.append(v)
+                                kept += 1
+                        except (ValueError, KeyError):
+                            continue
                 if kept == 0:
                     print(
-                        f"Warning: No rows kept from {samples_file} "
-                        f"for sentiment={SENT_NAMES[sentiment_filter]} and feature='{feature}'. (total rows={total})"
+                        f"Warning: No rows kept from {self.samples_file} "
+                        f"for sentiment={SENT_NAMES[self.sentiment_filter]} "
+                        f"and feature='{self.feature}' (total rows={total})"
                     )
         except FileNotFoundError:
-            print(f"Error: File not found: {samples_file}")
-            return []
+            print(f"Error: File not found: {self.samples_file}")
+            self._cached = np.array([], dtype=float)
+            return self._cached
         except (UnicodeDecodeError, csv.Error) as e:
-            print(f"Error reading {samples_file}: {e}")
-            return []
-        return data
+            print(f"Error reading {self.samples_file}: {e}")
+            self._cached = np.array([], dtype=float)
+            return self._cached
+
+        self._cached = np.asarray(data, dtype=float)
+        return self._cached
 
 
+@dataclass
 class Position:
-    def __init__(self, distribution: Distribution, position_label: str = ""):
-        self.distribution = distribution
-        self.label = position_label
+    distribution: Distribution
+    label: str
 
 
+@dataclass
 class Anchor(Position):
-    """锚点带显式情绪（用于填充样式编码）"""
-    def __init__(self, distribution: Distribution, sentiment: Sentiment, position_label: str):
+    sentiment: Sentiment
+
+    @classmethod
+    def make(
+        cls,
+        samples_file: Path,
+        sentiment: Sentiment,
+        feature: str,
+        mapping: Mapping[str, int],
+        position_label: Optional[str] = None,
+    ) -> "Anchor":
         label = position_label or f"GT_{SENT_NAMES[sentiment]}"
-        super().__init__(distribution, position_label)
-        self.sentiment = Sentiment(sentiment)
+        dist = Distribution(samples_file, sentiment, feature, mapping)
+        return cls(dist, label, sentiment)
 
 
+@dataclass
 class Target(Position):
-    """
-    orig_sentiment: 样本的原始情绪 (ground truth)
-    target_sentiment: 模型条件/目标情绪（你之前的 SI 情绪，现在命名更清晰）
-    """
-    def __init__(
-        self,
-        distribution: Distribution,
+    orig_sentiment: Sentiment
+    target_sentiment: Sentiment
+
+    @classmethod
+    def make(
+        cls,
+        samples_file: Path,
+        data_sentiment_filter: Sentiment,
+        feature: str,
+        mapping: Mapping[str, int],
         orig_sentiment: Sentiment,
         target_sentiment: Sentiment,
-        position_label: str | None = None
-    ):
-        label = position_label or f"{SENT_NAMES[orig_sentiment]}->TGT_{SENT_NAMES[target_sentiment]}"
-        super().__init__(distribution, label)
-        self.orig_sentiment = Sentiment(orig_sentiment)
-        self.target_sentiment = Sentiment(target_sentiment)
+        position_label: Optional[str] = None,
+    ) -> "Target":
+        auto = position_label or f"{SENT_NAMES[orig_sentiment]}->{SENT_NAMES[target_sentiment]}"
+        dist = Distribution(samples_file, data_sentiment_filter, feature, mapping)
+        return cls(dist, auto, orig_sentiment, target_sentiment)
 
 
+@dataclass
 class Task:
-    def __init__(self, task_anchors: list[Anchor], task_targets: list[Target], task_output: str, task_label: str = ""):
-        self.anchors = task_anchors
-        self.targets = task_targets
-        self.output = task_output
-        self.label = task_label
+    anchors: List[Anchor]
+    targets: List[Target]
+    output: Path
+    label: str = ""
+
+
+sentiment_mapping = load_sentiment_mapping(Path("output/prosody_predictor_gt/gt/pred/val.csv"))
+sentiment_mapping_train = load_sentiment_mapping(Path("output/prosody_predictor/sentiment_input_concat/pred/train.csv"))
 
 # =========================
 # Anchors (GT distributions)
 # =========================
 anchors_shared = [
-    Anchor(Distribution("output/prosody_predictor_gt/gt/pred/val.csv", NEG, "pitch"), NEG, "GT_NEG"),
-    Anchor(Distribution("output/prosody_predictor_gt/gt/pred/val.csv", NEU, "pitch"), NEU, "GT_NEU"),
-    Anchor(Distribution("output/prosody_predictor_gt/gt/pred/val.csv", POS, "pitch"), POS, "GT_POS"),
+    Anchor.make(Path("output/prosody_predictor_gt/gt/pred/val.csv"), Sentiment.NEG, "pitch", sentiment_mapping),
+    Anchor.make(Path("output/prosody_predictor_gt/gt/pred/val.csv"), Sentiment.NEU, "pitch", sentiment_mapping),
+    Anchor.make(Path("output/prosody_predictor_gt/gt/pred/val.csv"), Sentiment.POS, "pitch", sentiment_mapping),
 ]
 
 anchors_shared_train = [
-    Anchor(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train.csv", NEG, "pitch"), NEG, "GT_NEG"),
-    Anchor(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train.csv", NEU, "pitch"), NEU, "GT_NEU"),
-    Anchor(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train.csv", POS, "pitch"), POS, "GT_POS"),
+    Anchor.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train.csv"), Sentiment.NEG, "pitch", sentiment_mapping_train),
+    Anchor.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train.csv"), Sentiment.NEU, "pitch", sentiment_mapping_train),
+    Anchor.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train.csv"), Sentiment.POS, "pitch", sentiment_mapping_train),
 ]
 
 # =========================
@@ -145,386 +175,665 @@ anchors_shared_train = [
 tasks = [
 
     Task(
-        anchors_shared_train,
+        anchors_shared,
         [
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv", NEG, "pitch"), NEG, NEU),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv", NEU, "pitch"), NEU, NEU),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv", POS, "pitch"), POS, NEU),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv", NEG, "pitch"), NEG, NEG),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv", NEU, "pitch"), NEU, NEG),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv", POS, "pitch"), POS, NEG),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv", NEG, "pitch"), NEG, POS),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv", NEU, "pitch"), NEU, POS),
-            Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv", POS, "pitch"), POS, POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
         ],
-        task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat_train.png",
-        task_label="prosody-predictor_sentiment-input-concat_train"
+        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive2-0.5.png"),
+        label="prosody-predictor_sentiment-input_contrastive2-0.5",
     ),
 
+    Task(
+        anchors_shared,
+        [
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+        ],
+        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive2-1.png"),
+        label="prosody-predictor_sentiment-input_contrastive2-1",
+    ),
 
     # Task(
     #     anchors_shared,
     #     [
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv", POS, "pitch"), POS, POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
 
     #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat.png",
-    #     task_label="prosody-predictor_sentiment-input-concat"
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_90k_sentiment-input-translate2_contrastive2-10.png"),
+    #     label="prosody-predictor_90k_sentiment-input-translate2_contrastive2-10",
+    # ),
+
+    
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive2-10.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive2-10",
+    # ),
+
+    
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive2-1.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive2-1",
     # ),
 
     # Task(
     #     anchors_shared,
     #     [
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv", POS, "pitch"), POS, POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.5/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
 
     #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat_contrastive-0.png",
-    #     task_label="prosody-predictor_sentiment-input-concat_contrastive-0"
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive2-0.5.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive2-0.5",
     # ),
-    # Task(
-    #     anchors_shared,
-    #     [
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv", POS, "pitch"), POS, POS),
-    #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat_contrastive-0.1.png",
-    #     task_label="prosody-predictor_sentiment-input-concat_contrastive-0.1"
-    # ),
-
 
     # Task(
     #     anchors_shared,
     #     [
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor/sentiment_input/pred/val_pos.csv", POS, "pitch"), POS, POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.3/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
 
     #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input.png",
-    #     task_label="prosody-predictor_sentiment-input"
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive2-0.3.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive2-0.3",
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-0.1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive2-0.1.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive2-0.1",
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0.0001/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive-0.0001.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive-0.0001",
+    # ),
+
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate2-0/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive-0.png"),
+    #     label="prosody-predictor_sentiment-input-translate2_contrastive-0",
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_translate-0/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate_contrastive-0.png"),
+    #     label="prosody-predictor_sentiment-input-translate_contrastive-0",                                          
+    # ),
+
+    # Task(
+    #     anchors_shared_train,
+    #     [
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping_train, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping_train, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping_train, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping_train, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping_train, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping_train, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping_train, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping_train, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/train_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping_train, Sentiment.POS, Sentiment.POS),
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat_train.png"),
+    #     label="prosody-predictor_sentiment-input-concat_train",
+    # ),
+
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input_concat/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat.png"),
+    #     label="prosody-predictor_sentiment-input-concat",
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat_contrastive-0.png"),
+    #     label="prosody-predictor_sentiment-input-concat_contrastive-0",
     # ),
     # Task(
     #     anchors_shared,
     #     [
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv", POS, "pitch"), POS, POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input_concat-0.1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
     #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive-0.png",
-    #     task_label="prosody-predictor_sentiment-input_contrastive-0"
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-concat_contrastive-0.1.png"),
+    #     label="prosody-predictor_sentiment-input-concat_contrastive-0.1",
+    # ),
+
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor/sentiment_input/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input.png"),
+    #     label="prosody-predictor_sentiment-input",
     # ),
     # Task(
     #     anchors_shared,
     #     [
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv", POS, "pitch"), POS, POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
     #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive-0.01.png",
-    #     task_label="prosody-predictor_sentiment-input_contrastive-0.01"
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive-0.png"),
+    #     label="prosody-predictor_sentiment-input_contrastive-0",
     # ),
     # Task(
     #     anchors_shared,
     #     [
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv", NEG, "pitch"), NEG, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv", NEU, "pitch"), NEU, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv", POS, "pitch"), POS, NEU),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv", NEG, "pitch"), NEG, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv", NEU, "pitch"), NEU, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv", POS, "pitch"), POS, NEG),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv", NEG, "pitch"), NEG, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv", NEU, "pitch"), NEU, POS),
-    #         Target(Distribution("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv", POS, "pitch"), POS, POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.01/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
     #     ],
-    #     task_output="output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive-0.1.png",
-    #     task_label="prosody-predictor_sentiment-input_contrastive-0.1"
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive-0.01.png"),
+    #     label="prosody-predictor_sentiment-input_contrastive-0.01",
+    # ),
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+    #         Target.make(Path("output/prosody_predictor_contrastive/sentiment_input-0.1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive-0.1.png"),
+    #     label="prosody-predictor_sentiment-input_contrastive-0.1",
     # ),
 ]
-# =========================
-# Geometry: fixed equilateral triangle
-# =========================
-A = np.array([0.0, 0.0])
-B = np.array([1.0, 0.0])
-C = np.array([0.5, np.sqrt(3)/2])
-
-# 缩放到更紧凑的范围
-scale = 0.4
-A *= scale
-B *= scale
-C *= scale
-
-BA = B - A
-CA = C - A
-M = np.vstack([BA, CA])  # 2x2
-ATA = A @ A
-BTB = B @ B
-CTC = C @ C
-
-# Anchors 顺序需要与 order 对应
-order = ["GT_NEG", "GT_NEU", "GT_POS"]
-
 
 # =========================
-# Plot style mappings
+# Geometry with sentiment mapping
 # =========================
 
-FillStyle = Literal["full", "left", "right", "bottom", "top", "none"]
+def triangle_vertices_by_sentiment(scale: float = 0.4) -> dict[Sentiment, np.ndarray]:
+    """Return vertex coordinates keyed by Sentiment:
+       NEG -> bottom-left, NEU -> bottom-right, POS -> top."""
+    verts = {
+        # Sentiment.NEG: np.array([-0.5, 0.0], dtype=float),               # bottom-left
+        # Sentiment.NEU: np.array([ 0.5, 0.0], dtype=float),               # bottom-right
+        # Sentiment.POS: np.array([ 0.0, np.sqrt(3) / 2.0], dtype=float),  # top
+        Sentiment.POS: np.array([ 0.0, 1.0 ], dtype=float),  # top
+        Sentiment.NEU: np.array([ np.sqrt(3) / 2.0, 0.5 ], dtype=float),               # bottom-right
+        Sentiment.NEG: np.array([ 0.0, 0.0 ], dtype=float),               # bottom-left
+    }
+    for s in verts:
+        verts[s] *= scale
+    return verts
 
-# 形状 = 原始情绪
-orig_to_marker = {
-    Sentiment.NEG: "v",   # 下三角
-    Sentiment.NEU: "o",   # 圆
-    Sentiment.POS: "^",   # 上三角
-}
-# 填充 = 目标情绪
-target_to_fill: dict[Sentiment, FillStyle] = {
-    Sentiment.NEG: "full",    # 实心
-    Sentiment.NEU: "none",    # 空心
-    Sentiment.POS: "bottom",  # 半填（底部）
-}
-anchor_to_fill: dict[Sentiment, FillStyle] = {
-    Sentiment.NEG: "full",
-    Sentiment.NEU: "none",
-    Sentiment.POS: "bottom",
-}
+def make_trilaterator_from_task(
+    anchors: Sequence[Anchor],
+    vertices_by_sent: Mapping[Sentiment, np.ndarray],
+) -> Tuple[Callable[[float, float, float], np.ndarray], List[Sentiment], Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """
+    Use Task.anchors order to define (A,B,C). Returns (trilaterate, order_sents, (A,B,C)).
+    """
+    if len(anchors) != 3:
+        raise ValueError(f"Expected exactly 3 anchors, got {len(anchors)}")
 
-def get_target_fill(s: Sentiment) -> FillStyle:
-    return target_to_fill.get(s, cast(FillStyle, "none"))
+    order_sents: List[Sentiment] = [a.sentiment for a in anchors]
 
-def get_anchor_fill(s: Sentiment) -> FillStyle:
-    return anchor_to_fill.get(s, cast(FillStyle, "none"))
+    # Optional safety checks
+    if len(set(order_sents)) < 3:
+        print(f"Warning: duplicate sentiments in anchors order: {[SENT_NAMES[s] for s in order_sents]}")
 
-# 尺寸参数：scatter 的 s 是面积；plot 的 markersize 是半径像素
-MARKER_AREA = 120.0
-MARKER_SIZE = float(np.sqrt(MARKER_AREA))  # 用于 plot(Line2D)
-EDGE_WIDTH  = 1.2
-ALPHA       = 0.9
+    A = vertices_by_sent[order_sents[0]]
+    B = vertices_by_sent[order_sents[1]]
+    C = vertices_by_sent[order_sents[2]]
 
-# 锚点样式（与 target 形状完全脱钩）
-ANCHOR_MARKER = 'D'   # 菱形；也可改为 's' 方块
-ANCHOR_SIZE   = MARKER_SIZE * 1.1
-ANCHOR_EDGEW  = 1.4
+    # Build trilaterator for these exact A,B,C
+    BA = B - A
+    CA = C - A
+    M = np.vstack([BA, CA])  # 2x2
+    ATA = float(A @ A)
+    BTB = float(B @ B)
+    CTC = float(C @ C)
 
-
-# =========================
-# Main loop
-# =========================
-for task in tasks:
-    anchors = task.anchors
-    targets = task.targets
-    output = task.output
-    label = task.label
-
-    # 1) 基础校验
-    if any(len(a.distribution.samples) == 0 for a in anchors):
-        print(f"Error: One or more anchor distributions are empty for task '{label}'. Skip plotting.")
-        continue
-    anchor_labels = [a.label for a in anchors]
-    if anchor_labels != order:
-        print(f"Note: anchor label order {anchor_labels} != expected {order}. Make sure order matches A,B,C.")
-
-    # 2) 预取锚点样本并计算 Wasserstein 距离
-    anchor_samples = {a.label: np.asarray(a.distribution.samples, dtype=float) for a in anchors}
-
-    dist: dict[str, dict[str, float]] = {}
-    for t in targets:
-        t_samples = np.asarray(t.distribution.samples, dtype=float)
-        if t_samples.size == 0:
-            print(f"Warning: Target '{t.label}' has empty distribution. It will be skipped.")
-        dist[t.label] = {}
-        for a in anchors:
-            d = wasserstein_distance(anchor_samples[a.label], t_samples) if t_samples.size else np.nan
-            dist[t.label][a.label] = float(d)
-
-    # 3) OLS trilateration
     def trilaterate(dist_a: float, dist_b: float, dist_c: float) -> np.ndarray:
         if not (np.isfinite(dist_a) and np.isfinite(dist_b) and np.isfinite(dist_c)):
             return np.array([np.nan, np.nan], dtype=float)
         b1 = (BTB - ATA + dist_a**2 - dist_b**2) / 2.0
         b2 = (CTC - ATA + dist_a**2 - dist_c**2) / 2.0
         p, *_ = np.linalg.lstsq(M, np.array([b1, b2]), rcond=None)
-        return p
+        return p.astype(float)
 
-    coords: dict[str, np.ndarray] = {}
+    return trilaterate, order_sents, (A, B, C)
+
+
+# =========================
+# Plot style mappings
+# =========================
+FillStyle = Literal["full", "left", "right", "bottom", "top", "none"]
+
+orig_to_marker: Dict[Sentiment, str] = {NEG: "v", NEU: "o", POS: "^"}
+target_to_fill: Dict[Sentiment, FillStyle] = {NEG: "bottom", NEU: "full", POS: "top"}
+
+MARKER_AREA = 120.0
+MARKER_SIZE = float(math.sqrt(MARKER_AREA))
+EDGE_WIDTH = 1.2
+ALPHA = 0.9
+
+# ANCHOR_MARKER = "D"
+# ANCHOR_SIZE = MARKER_SIZE * 1.1
+ANCHOR_EDGEW = 1.4
+
+
+# Wash-out style for anchors (distinct from targets)
+ANCHOR_ALPHA       = 1.0          # fainter than targets
+ANCHOR_EDGE_COLOR  = '0.45'       # gray edge
+ANCHOR_FACE_COLOR  = '0.70'       # gray fill (used when fillstyle != 'none')
+ANCHOR_FACE_ALT    = '1.0'        # white for the other half in half-fill styles
+
+BORDER_ZORDER      = 0            # draw behind everything
+ANCHOR_ZORDER      = 1            # draw behind targets
+TARGET_ZORDER      = 2            # draw targets above anchors
+
+# Let anchors follow original sentiment shape instead of diamond
+# (keep orig_to_marker as-is; we’ll use it for anchors too)
+# Example:
+# orig_to_marker = {NEG: 'v', NEU: 'o', POS: '^'}
+
+# Optional: size tweak to subtly de-emphasize anchors
+ANCHOR_SIZE = MARKER_SIZE * 0.95
+
+def compute_wasserstein_distances_in_order(
+    anchors: Sequence[Anchor],
+    targets: Sequence[Target],
+) -> Dict[str, List[float]]:
+    """
+    Returns:
+      dist_ordered[target_label] = [d_to_anchor0, d_to_anchor1, d_to_anchor2]
+    where the order matches anchors as given in the task.
+    """
+    # preload anchor samples in task order
+    anchor_samps_ordered: List[np.ndarray] = []
+    for a in anchors:
+        samps = a.distribution.load_samples()
+        if samps.size == 0:
+            print(f"Error: Anchor distribution for {SENT_NAMES[a.sentiment]} is empty.")
+        anchor_samps_ordered.append(samps)
+
+    dist_ordered: Dict[str, List[float]] = {}
+
     for t in targets:
-        d_a = dist[t.label][order[0]]
-        d_b = dist[t.label][order[1]]
-        d_c = dist[t.label][order[2]]
-        coords[t.label] = trilaterate(d_a, d_b, d_c)
+        t_samps = t.distribution.load_samples()
+        if t_samps.size == 0:
+            print(f"Warning: Target '{t.label}' has empty distribution. It will be skipped.")
+        d_list: List[float] = []
+        for a_samps in anchor_samps_ordered:
+            d = wasserstein_distance(a_samps, t_samps) if t_samps.size else float("nan")
+            d_list.append(float(d))
+        dist_ordered[t.label] = d_list
 
-    # 4) 绘图
+    return dist_ordered
+
+def embedd_targets_from_order(
+    dist_ordered: Mapping[str, Sequence[float]],
+    trilaterate: Callable[[float, float, float], np.ndarray],
+) -> Dict[str, np.ndarray]:
+    coords: Dict[str, np.ndarray] = {}
+    for t_label, dvec in dist_ordered.items():
+        if len(dvec) != 3:
+            print(f"Error: expected 3 distances for '{t_label}', got {len(dvec)}")
+            coords[t_label] = np.array([np.nan, np.nan], dtype=float)
+            continue
+        coords[t_label] = trilaterate(dvec[0], dvec[1], dvec[2])  # exact same order as anchors
+    return coords
+
+def plot_embedding(
+    *,
+    vertices_by_sent: Mapping[Sentiment, np.ndarray],  # from triangle_vertices_by_sentiment
+    anchors: Sequence[Anchor],
+    targets: Sequence[Target],
+    target_coords: Mapping[str, np.ndarray],
+    out_path: Path,
+    title: str = "",
+) -> None:
     fig, ax = plt.subplots(figsize=(6, 6))
 
-    # 参考等边三角形边（灰色虚线）
-    tri_x = [A[0], B[0], C[0], A[0]]
-    tri_y = [A[1], B[1], C[1], A[1]]
-    ax.plot(tri_x, tri_y, linestyle='--', linewidth=1.0, color='0.6')
+    A = vertices_by_sent[Sentiment.NEG]
+    B = vertices_by_sent[Sentiment.NEU]
+    C = vertices_by_sent[Sentiment.POS]
 
-    # 锚点（固定菱形，填充样式=锚点情绪），并给三点注释做像素级偏移
-    for (lab, xy, anc) in zip(order, np.vstack([A, B, C]), anchors):
-        afill = get_anchor_fill(anc.sentiment)
-        mfc   = 'black' if afill != 'none' else 'none'
-        mfc2  = 'white'
-        ax.plot([xy[0]], [xy[1]],
-                linestyle='None',
-                marker=ANCHOR_MARKER, markersize=ANCHOR_SIZE,
-                markerfacecolor=mfc, markerfacecoloralt=mfc2,
-                markeredgecolor='black', markeredgewidth=ANCHOR_EDGEW,
-                fillstyle=afill)
+    # triangle border
+    ax.plot([A[0], B[0], C[0], A[0]], [A[1], B[1], C[1], A[1]],
+            linestyle="--", linewidth=1.0, color="0.9", zorder=BORDER_ZORDER)
 
-    # 锚点文本偏移（避免与角落/图例冲突）
-    ax.annotate(" GT_NEG", xy=(A[0], A[1]), xytext=(6, 6),   textcoords='offset points',
-                ha='left',  va='bottom', fontsize=10)
-    ax.annotate(" GT_NEU", xy=(B[0], B[1]), xytext=(-6, 6),  textcoords='offset points',
-                ha='right', va='bottom', fontsize=10)
-    ax.annotate(" GT_POS", xy=(C[0], C[1]), xytext=(6, -6),  textcoords='offset points',
-                ha='left',  va='top',    fontsize=10)
+    # anchors at their sentiment-defined vertex
+    # anchors (by their sentiment)
+    # anchors (washed out; shape follows original sentiment; fill matches target labeling)
+    for anc in anchors:
+        xy = vertices_by_sent[anc.sentiment]   # or coords_map[...] if you use that API
+        marker = orig_to_marker[anc.sentiment] # shape = original sentiment
+        fill   = target_to_fill[anc.sentiment] # fill = target labeling style (NEG full, NEU none, POS bottom)
 
-    # 目标点（形状=原始；填充=目标），不加点旁文字
-    plotted_any = False
-    for t in targets:
-        xy = coords[t.label]
-        if not np.all(np.isfinite(xy)):
-            continue
-        marker = orig_to_marker.get(t.orig_sentiment, "s")
-        fill   = get_target_fill(t.target_sentiment)
-        mfc  = 'black' if fill != 'none' else 'none'
-        mfc2 = 'white'
+        # washed-out colors
+        if fill == 'none':
+            mfc  = 'none'
+            mfc2 = ANCHOR_FACE_ALT
+        else:
+            mfc  = ANCHOR_FACE_COLOR
+            mfc2 = ANCHOR_FACE_ALT
+
         ax.plot([xy[0]], [xy[1]],
                 linestyle='None',
                 marker=marker,
-                markersize=MARKER_SIZE,
+                markersize=ANCHOR_SIZE,
                 markerfacecolor=mfc,
                 markerfacecoloralt=mfc2,
-                markeredgecolor='black',
-                markeredgewidth=EDGE_WIDTH,
+                markeredgecolor=ANCHOR_EDGE_COLOR,
+                markeredgewidth=ANCHOR_EDGEW,
                 fillstyle=fill,
-                alpha=ALPHA)
+                alpha=ANCHOR_ALPHA,
+                zorder=ANCHOR_ZORDER)
+
+    # targets
+    plotted_any = False
+    for t in targets:
+        xy = target_coords.get(t.label, np.array([np.nan, np.nan]))
+        if not np.all(np.isfinite(xy)):
+            continue
+        marker = orig_to_marker.get(t.orig_sentiment, "s")
+        fill   = target_to_fill.get(t.target_sentiment, "none")
+        mfc = "black" if fill != "none" else "none"
+        ax.plot([xy[0]], [xy[1]],
+            linestyle='None',
+            marker=marker,
+            markersize=MARKER_SIZE,
+            markerfacecolor=mfc,
+            markerfacecoloralt='white',
+            markeredgecolor='black',
+            markeredgewidth=EDGE_WIDTH,
+            fillstyle=fill,
+            alpha=ALPHA,
+            zorder=TARGET_ZORDER)
         plotted_any = True
 
     if not plotted_any:
-        print(f"Warning: no valid target points for task '{label}'. Skipping save to {output}.")
-        plt.close(fig)
-        continue
+        print(f"Warning: no valid target points for plot '{title}'. Skipping save to {out_path}.")
+        plt.close(fig); return
 
-    ax.set_aspect('equal', adjustable='box')
-    if label:
-        fig.suptitle(label, fontsize=10)
-    plt.tight_layout(rect=(0, 0, 1, 0.93))  # 顶部多留白，容纳上方图例
-
-    # 5) 三组图例：左上两块 + 右上一块，避开上方中间的 GT_POS
-    # Anchors legend（左上第二块）
-    anchor_fill_handles = [
-        Line2D([0], [0], marker=ANCHOR_MARKER, linestyle='None',
-               markersize=ANCHOR_SIZE * 0.85,
-               markerfacecolor='black', markerfacecoloralt='white',
-               markeredgecolor='black', markeredgewidth=ANCHOR_EDGEW,
-               fillstyle=anchor_to_fill[Sentiment.NEG], label='GT_NEG'),
-        Line2D([0], [0], marker=ANCHOR_MARKER, linestyle='None',
-               markersize=ANCHOR_SIZE * 0.85,
-               markerfacecolor='none',  markerfacecoloralt='white',
-               markeredgecolor='black', markeredgewidth=ANCHOR_EDGEW,
-               fillstyle=anchor_to_fill[Sentiment.NEU], label='GT_NEU'),
-        Line2D([0], [0], marker=ANCHOR_MARKER, linestyle='None',
-               markersize=ANCHOR_SIZE * 0.85,
-               markerfacecolor='black', markerfacecoloralt='white',
-               markeredgecolor='black', markeredgewidth=ANCHOR_EDGEW,
-               fillstyle=anchor_to_fill[Sentiment.POS], label='GT_POS'),
-    ]
-
-    # Shape legend（左上第一块）
+    # legends (unchanged)
     shape_handles = [
-        Line2D([0], [0], marker=orig_to_marker[Sentiment.NEG], linestyle='None',
-               markersize=MARKER_SIZE * 0.85,
-               markerfacecolor='none', markeredgecolor='black', markeredgewidth=EDGE_WIDTH, label='NEG'),
-        Line2D([0], [0], marker=orig_to_marker[Sentiment.NEU], linestyle='None',
-               markersize=MARKER_SIZE * 0.85,
-               markerfacecolor='none', markeredgecolor='black', markeredgewidth=EDGE_WIDTH, label='NEU'),
-        Line2D([0], [0], marker=orig_to_marker[Sentiment.POS], linestyle='None',
-               markersize=MARKER_SIZE * 0.85,
-               markerfacecolor='none', markeredgecolor='black', markeredgewidth=EDGE_WIDTH, label='POS'),
+        Line2D([0],[0], marker=orig_to_marker[Sentiment.POS], linestyle="None",
+               markersize=MARKER_SIZE*0.85, markerfacecolor="none",
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="POS"),
+        Line2D([0],[0], marker=orig_to_marker[Sentiment.NEU], linestyle="None",
+               markersize=MARKER_SIZE*0.85, markerfacecolor="none",
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="NEU"),
+        Line2D([0],[0], marker=orig_to_marker[Sentiment.NEG], linestyle="None",
+               markersize=MARKER_SIZE*0.85, markerfacecolor="none",
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="NEG"),
     ]
-
-    # Target fill legend（右上）
+    anchor_fill_handles = [
+        Line2D([0], [0],
+            marker=orig_to_marker[Sentiment.POS], linestyle='None',
+            markersize=ANCHOR_SIZE * 0.85,
+            markerfacecolor=ANCHOR_FACE_COLOR,
+            markerfacecoloralt=ANCHOR_FACE_ALT,
+            markeredgecolor=ANCHOR_EDGE_COLOR, markeredgewidth=ANCHOR_EDGEW,
+            fillstyle=target_to_fill[Sentiment.POS],
+            alpha=ANCHOR_ALPHA,
+            label='GT_POS'),
+        Line2D([0], [0],
+            marker=orig_to_marker[Sentiment.NEU], linestyle='None',
+            markersize=ANCHOR_SIZE * 0.85,
+            markerfacecolor='none',
+            markerfacecoloralt=ANCHOR_FACE_ALT,
+            markeredgecolor=ANCHOR_EDGE_COLOR, markeredgewidth=ANCHOR_EDGEW,
+            fillstyle=target_to_fill[Sentiment.NEU],
+            alpha=ANCHOR_ALPHA,
+            label='GT_NEU'),
+        Line2D([0], [0],
+            marker=orig_to_marker[Sentiment.NEG], linestyle='None',
+            markersize=ANCHOR_SIZE * 0.85,
+            markerfacecolor=ANCHOR_FACE_COLOR,
+            markerfacecoloralt=ANCHOR_FACE_ALT,
+            markeredgecolor=ANCHOR_EDGE_COLOR, markeredgewidth=ANCHOR_EDGEW,
+            fillstyle=target_to_fill[Sentiment.NEG],
+            alpha=ANCHOR_ALPHA,
+            label='GT_NEG'),
+    ]
     fill_handles = [
-        Line2D([0], [0], marker='o', linestyle='None',
-               markersize=MARKER_SIZE * 0.85,
-               markerfacecolor='black', markerfacecoloralt='white',
-               markeredgecolor='black', markeredgewidth=EDGE_WIDTH,
-               fillstyle=target_to_fill[Sentiment.NEG], label='TGT_NEG'),
-        Line2D([0], [0], marker='o', linestyle='None',
-               markersize=MARKER_SIZE * 0.85,
-               markerfacecolor='none',  markerfacecoloralt='white',
-               markeredgecolor='black', markeredgewidth=EDGE_WIDTH,
-               fillstyle=target_to_fill[Sentiment.NEU], label='TGT_NEU'),
-        Line2D([0], [0], marker='o', linestyle='None',
-               markersize=MARKER_SIZE * 0.85,
-               markerfacecolor='black', markerfacecoloralt='white',
-               markeredgecolor='black', markeredgewidth=EDGE_WIDTH,
-               fillstyle=target_to_fill[Sentiment.POS], label='TGT_POS'),
+        Line2D([0],[0], marker="o", linestyle="None", markersize=MARKER_SIZE*0.85,
+               markerfacecolor="black", markerfacecoloralt="white",
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH,
+               fillstyle=target_to_fill[Sentiment.POS], label="TGT_POS"),
+        Line2D([0],[0], marker="o", linestyle="None", markersize=MARKER_SIZE*0.85,
+               markerfacecolor="none", markerfacecoloralt="white",
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH,
+               fillstyle=target_to_fill[Sentiment.NEU], label="TGT_NEU"),
+        Line2D([0],[0], marker="o", linestyle="None", markersize=MARKER_SIZE*0.85,
+               markerfacecolor="black", markerfacecoloralt="white",
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH,
+               fillstyle=target_to_fill[Sentiment.NEG], label="TGT_NEG"),
     ]
 
-    # 左上列：1) Original（顶）；2) Anchor（其下）
     legend_shape = ax.legend(handles=shape_handles, title="Original sentiment (shape)",
-                             loc='upper left', bbox_to_anchor=(0.02, 0.98),
+                             loc="upper right", bbox_to_anchor=(0.98, 0.98),
                              borderaxespad=0.0, fontsize=8, frameon=True)
     ax.add_artist(legend_shape)
 
-    legend_anchor = ax.legend(handles=anchor_fill_handles, title="Anchor sentiment (fill)",
-                              loc='upper left', bbox_to_anchor=(0.02, 0.80),
-                              borderaxespad=0.0, fontsize=8, frameon=True)
-    ax.add_artist(legend_anchor)
-
-    # 右上列：3) Target（顶）
     legend_fill = ax.legend(handles=fill_handles, title="Target sentiment (fill)",
-                            loc='upper right', bbox_to_anchor=(0.98, 0.98),
+                            loc="upper right", bbox_to_anchor=(0.98, 0.80),
                             borderaxespad=0.0, fontsize=8, frameon=True)
     ax.add_artist(legend_fill)
 
-    # 6) 保存
-    os.makedirs(os.path.dirname(output), exist_ok=True)
-    fig.savefig(output, dpi=300)
+    legend_anchor = ax.legend(handles=anchor_fill_handles, title="Anchor sentiment",
+                              loc="lower right", bbox_to_anchor=(0.98, 0.02),
+                              borderaxespad=0.0, fontsize=8, frameon=True)
+    ax.add_artist(legend_anchor)
+
+    ax.set_aspect("equal", adjustable="box")
+    if title:
+        fig.suptitle(title, fontsize=10)
+    plt.tight_layout(rect=(0, 0, 1, 0.93))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
 
-print("Done.")
+
+# =========================
+# Main
+# =========================
+def main() -> None:
+    # SENTIMENTS_REF_FILE = Path("output/prosody_predictor/sentiment_input_concat/pred/train.csv")
+    # mapping = load_sentiment_mapping(SENTIMENTS_REF_FILE)
+
+    # tasks = build_example_tasks(mapping)
+
+    # vertices keyed by sentiment
+    verts = triangle_vertices_by_sentiment(scale=0.4)
+
+    for task in tasks:
+        trilaterate, order_sents, (A, B, C) = make_trilaterator_from_task(task.anchors, verts)
+
+        dist_ordered = compute_wasserstein_distances_in_order(task.anchors, task.targets)
+
+        coords = embedd_targets_from_order(dist_ordered, trilaterate)
+
+        plot_embedding(
+            vertices_by_sent=verts,
+            anchors=task.anchors,
+            targets=task.targets,
+            target_coords=coords,
+            out_path=task.output,
+            title=task.label,
+        )
+
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

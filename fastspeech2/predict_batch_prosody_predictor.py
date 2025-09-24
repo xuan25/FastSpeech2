@@ -68,7 +68,7 @@ def get_model_infer(ckpt_path,
     model.requires_grad_(False)
     return model
 
-def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_config_path: str, data_split_name: str, pitch_control: float, energy_control: float, duration_control: float, batch_size: int):
+def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_config_path: str, data_split_name: str, pitch_control: float, energy_control: float, duration_control: float, batch_size: int, sentiment_control: int):
     control_values = pitch_control, energy_control, duration_control
     dataset_config = DatasetConfig.load_from_yaml(dataset_config_path)
     model_config = ModelConfig.load_from_yaml(model_config_path)
@@ -110,10 +110,17 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
 
     with open(output_path, "w", encoding="utf-8", newline="") as f:
         csv_writer = csv.writer(f)
-        csv_writer.writerow(["data_id", "phone_idx", "phone", "pitch", "energy", "duration", "sentiment"])
+        csv_writer.writerow(["data_id", "phone_idx", "phone", "pitch", "energy", "duration", "sentiment", "sentiment_source"])
 
         for batch in tqdm.tqdm(batchs, desc="[Decoding]", dynamic_ncols=True):
             batch: DataBatch = batch
+
+            if sentiment_control >= 0:
+                for i, sample in enumerate(batch):
+                    sample.sentiment = sentiment_control
+                assert batch.sentiments is not None
+                batch.sentiments = np.array([sentiment_control] * batch.sentiments.shape[0], dtype=np.int64)
+
             batch_torch: DataBatchTorch = batch.to_torch(device)
             with torch.no_grad():
                 # Forward
@@ -133,8 +140,7 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
                         duration = torch.exp(duration_log).item()  # Convert log duration to actual duration
                         from .text.symbols import symbols
                         phone_alphabet = symbols[phone]
-                        csv_writer.writerow([sample_id, j, phone_alphabet, pitch, energy, duration, sample.sentiment])
-
+                        csv_writer.writerow([sample_id, j, phone_alphabet, pitch, energy, duration, sample.sentiment, sample.sentiment_source])
 
 def main():
 
@@ -196,6 +202,12 @@ def main():
         default=16,
         help="batch size for synthesis",
     )
+    parser.add_argument(
+        "--sentiment_control",
+        type=int,
+        default=-1,
+        help="control the sentiment of the whole utterance, -1 for no control",
+    )
     args = parser.parse_args()
 
     process(
@@ -207,7 +219,8 @@ def main():
         pitch_control=args.pitch_control,
         energy_control=args.energy_control,
         duration_control=args.duration_control,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        sentiment_control=args.sentiment_control
     )
 
 if __name__ == "__main__":

@@ -57,6 +57,8 @@ class Encoder(nn.Module):
 
         self.sentiment_mode = sentiment_mode
 
+        self.num_sentiments = num_sentiments
+
         if sentiment_mode == "input_concat":
             assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
             d_word_vec -= num_sentiments
@@ -79,6 +81,9 @@ class Encoder(nn.Module):
         )
 
         self.sentiment_emb_input = None
+        # self.sentiment_emb_input_from = None
+        # self.sentiment_emb_input_to = None
+
         if sentiment_mode == "input":
             assert num_sentiments is not None, "num_sentiments must be provided for input sentiment mode"
             self.sentiment_emb_input = nn.Embedding(
@@ -92,6 +97,38 @@ class Encoder(nn.Module):
             #     _freeze=True
             # )
             # print(f"Warning: Initialized sentiment embedding with zeros for {num_sentiments} sentiments.")
+        if sentiment_mode == "input_translate":
+            assert num_sentiments is not None, "num_sentiments must be provided for input_translate sentiment mode"
+            # self.sentiment_emb_input_from = nn.Embedding(
+            #     num_sentiments,
+            #     d_word_vec,
+            # )
+            # self.sentiment_emb_input_to = nn.Embedding(
+            #     num_sentiments,
+            #     d_word_vec,
+            # )
+            num_sentiment_transforms = num_sentiments * num_sentiments
+            self.sentiment_emb_input = nn.Embedding(
+                num_sentiment_transforms,
+                d_word_vec,
+            )
+            # self.sentiment_emb_input.weight.data.normal_(0, 0.1)
+        if sentiment_mode == "input_translate2":
+            assert num_sentiments is not None, "num_sentiments must be provided for input_translate2 sentiment mode"
+            # self.sentiment_emb_input_from = nn.Embedding(
+            #     num_sentiments,
+            #     d_word_vec,
+            # )
+            # self.sentiment_emb_input_to = nn.Embedding(
+            #     num_sentiments,
+            #     d_word_vec,
+            # )
+            num_sentiment_transforms = num_sentiments * num_sentiments
+            self.sentiment_emb_input = nn.Embedding(
+                num_sentiment_transforms,
+                d_word_vec,
+            )
+            # self.sentiment_emb_input.weight.data.normal_(0, 0.1)
         if sentiment_mode == "input_concat":
             assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
             orthogonal_weights = torch.eye(num_sentiments)
@@ -101,7 +138,7 @@ class Encoder(nn.Module):
             )
             self.sentiment_emb_input.weight.data = orthogonal_weights
 
-    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, return_attns=False):
+    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, sentiments_source: torch.Tensor | None = None, return_attns=False):
 
         enc_slf_attn_list = []
         batch_size, max_len = src_seq.shape[0], src_seq.shape[1]
@@ -121,17 +158,58 @@ class Encoder(nn.Module):
                 :, :max_len, :
             ].expand(batch_size, -1, -1)
         
-        if self.sentiment_emb_input is not None:
-            if self.sentiment_mode == "input":
-                sentiment_emb = self.sentiment_emb_input(
-                    sentiments
-                ).unsqueeze(1).expand(batch_size, max_len, -1)
-                enc_output = enc_output + sentiment_emb
-            elif self.sentiment_mode == "input_concat":
-                sentiment_emb = self.sentiment_emb_input(
-                    sentiments
-                ).unsqueeze(1).expand(batch_size, max_len, -1)
-                enc_output = torch.cat((enc_output, sentiment_emb), dim=-1)
+        if self.sentiment_mode == "input":
+            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input sentiment mode"
+            sentiment_emb = self.sentiment_emb_input(
+                sentiments
+            ).unsqueeze(1).expand(batch_size, max_len, -1)
+            enc_output = enc_output + sentiment_emb
+        elif self.sentiment_mode == "input_translate":
+            # assert self.sentiment_emb_input_from is not None and self.sentiment_emb_input_to is not None, "sentiment_emb_input_from and sentiment_emb_input_to must be provided for input_translate sentiment mode"
+            # sentiment_emb_from = self.sentiment_emb_input_from(
+            #     sentiments_source
+            # ).unsqueeze(1).expand(batch_size, max_len, -1)
+            # sentiment_emb_to = self.sentiment_emb_input_to(
+            #     sentiments
+            # ).unsqueeze(1).expand(batch_size, max_len, -1)
+            # enc_output = enc_output + (sentiment_emb_to - sentiment_emb_from)
+
+            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input_translate sentiment mode"
+            assert sentiments_source is not None, "sentiments_source must be provided for input_translate sentiment mode"
+            assert sentiments is not None, "sentiments must be provided for input_translate sentiment mode"
+            assert self.num_sentiments is not None, "num_sentiments must be provided for input_translate sentiment mode"
+
+            sentiment_transform_id = sentiments_source * self.num_sentiments + sentiments
+
+            sentiment_emb = self.sentiment_emb_input(
+                sentiment_transform_id
+            ).unsqueeze(1).expand(batch_size, max_len, -1)
+            enc_output = enc_output + sentiment_emb
+
+        elif self.sentiment_mode == "input_translate2":
+            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input_translate2 sentiment mode"
+            assert sentiments_source is not None, "sentiments_source must be provided for input_translate2 sentiment mode"
+            assert sentiments is not None, "sentiments must be provided for input_translate2 sentiment mode"
+            assert self.num_sentiments is not None, "num_sentiments must be provided for input_translate2 sentiment mode"
+            
+            sentiment_emb_source = self.sentiment_emb_input(
+                sentiments_source
+            )[:, :self.sentiment_emb_input.embedding_dim // 2]
+            sentiment_emb_target = self.sentiment_emb_input(
+                sentiments
+            )[:, self.sentiment_emb_input.embedding_dim // 2:]
+
+            sentiment_emb = torch.cat((sentiment_emb_source, sentiment_emb_target), dim=-1
+                                      ).unsqueeze(1).expand(batch_size, max_len, -1)
+
+            enc_output = enc_output + sentiment_emb
+            
+        elif self.sentiment_mode == "input_concat":
+            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input_concat sentiment mode"
+            sentiment_emb = self.sentiment_emb_input(
+                sentiments
+            ).unsqueeze(1).expand(batch_size, max_len, -1)
+            enc_output = torch.cat((enc_output, sentiment_emb), dim=-1)
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
