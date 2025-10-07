@@ -121,3 +121,6 @@ fastspeech2/hifigan/ckpt/*.pth.tar
 .temp
 data/*.tar
 data/*.tar.index
+
+
+.venv*
