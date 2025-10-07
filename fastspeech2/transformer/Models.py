@@ -35,7 +35,7 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
 class Encoder(nn.Module):
     """ Encoder """
 
-    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int, sentiment_mode: str | None, num_sentiments: int | None):
+    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int, sentiment_mode: str | None, num_sentiments: int | None, emotion_mode: str | None = None, num_emotions: int | None = None):
         super(Encoder, self).__init__()
 
         n_position = max_seq_len + 1
@@ -56,8 +56,10 @@ class Encoder(nn.Module):
         self.d_model = d_model
 
         self.sentiment_mode = sentiment_mode
-
         self.num_sentiments = num_sentiments
+
+        self.emotion_mode = emotion_mode
+        self.num_emotions = num_emotions
 
         if sentiment_mode == "input_concat":
             assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
@@ -138,7 +140,22 @@ class Encoder(nn.Module):
             )
             self.sentiment_emb_input.weight.data = orthogonal_weights
 
-    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, sentiments_source: torch.Tensor | None = None, return_attns=False):
+        if emotion_mode == "input":
+            assert num_emotions is not None, "num_emotions must be provided for input emotion mode"
+            self.emotion_emb_input = nn.Embedding(
+                num_emotions,
+                d_word_vec,
+            )
+        if emotion_mode == "input_translate2":
+            assert num_emotions is not None, "num_emotions must be provided for input_translate2 emotion mode"
+            # num_emotion_transforms = num_emotions * num_emotions
+            num_emotion_transforms = num_emotions
+            self.emotion_emb_input = nn.Embedding(
+                num_emotion_transforms,
+                d_word_vec,
+            )
+
+    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, sentiments_source: torch.Tensor | None = None, emotions: torch.Tensor | None = None, emotions_source: torch.Tensor | None = None, return_attns=False):
 
         enc_slf_attn_list = []
         batch_size, max_len = src_seq.shape[0], src_seq.shape[1]
@@ -210,6 +227,32 @@ class Encoder(nn.Module):
                 sentiments
             ).unsqueeze(1).expand(batch_size, max_len, -1)
             enc_output = torch.cat((enc_output, sentiment_emb), dim=-1)
+
+        if self.emotion_mode == "input":
+            assert self.emotion_emb_input is not None, "emotion_emb_input must be provided for input emotion mode"
+            emotion_emb = self.emotion_emb_input(
+                emotions
+            ).unsqueeze(1).expand(batch_size, max_len, -1)
+            enc_output = enc_output + emotion_emb
+
+        elif self.emotion_mode == "input_translate2":
+            assert self.emotion_emb_input is not None, "emotion_emb_input must be provided for input_translate2 emotion mode"
+            assert emotions_source is not None, "emotions_source must be provided for input_translate2 emotion mode"
+            assert emotions is not None, "emotions must be provided for input_translate2 emotion mode"
+            assert self.num_emotions is not None, "num_emotions must be provided for input_translate2 emotion mode"
+            
+            emotion_emb_source = self.emotion_emb_input(
+                emotions_source
+            )[:, :self.emotion_emb_input.embedding_dim // 2]
+            emotion_emb_target = self.emotion_emb_input(
+                emotions
+            )[:, self.emotion_emb_input.embedding_dim // 2:]
+
+            emotion_emb = torch.cat((emotion_emb_source, emotion_emb_target), dim=-1
+                                      ).unsqueeze(1).expand(batch_size, max_len, -1)
+
+            enc_output = enc_output + emotion_emb
+
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(

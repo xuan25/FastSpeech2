@@ -11,6 +11,7 @@ class DatasetPathConfig:
         feature_dir: str,
         stats_file: str,
         sentiment_file: str | None = None,
+        emotion_file: str | None = None
     ):
         self.base_dir = base_dir
         self.meta_file_train = meta_file_train
@@ -19,6 +20,7 @@ class DatasetPathConfig:
         self.feature_dir = feature_dir
         self.stats_file = stats_file
         self.sentiment_file = sentiment_file
+        self.emotion_file = emotion_file
 
     def __repr__(self):
         # with formatting
@@ -30,7 +32,8 @@ class DatasetPathConfig:
             f"    speaker_map_file={self.speaker_map_file}, \n"
             f"    feature_dir={self.feature_dir}, \n"
             f"    stats_file={self.stats_file}, \n"
-            f"    sentiment_file={self.sentiment_file})"
+            f"    sentiment_file={self.sentiment_file}), \n"
+            f"    emotion_file={self.emotion_file}"
         )
 
     def to_dict(self):
@@ -41,7 +44,8 @@ class DatasetPathConfig:
             "speaker_map_file": self.speaker_map_file,
             "feature_dir": self.feature_dir,
             "stats_file": self.stats_file,
-            "sentiment_file": self.sentiment_file
+            "sentiment_file": self.sentiment_file,
+            "emotion_file": self.emotion_file
         }
     
     @classmethod
@@ -53,7 +57,8 @@ class DatasetPathConfig:
             speaker_map_file=config_dict['speaker_map_file'],
             feature_dir=config_dict['feature_dir'],
             stats_file=config_dict['stats_file'],
-            sentiment_file=config_dict.get('sentiment_file', None)
+            sentiment_file=config_dict.get('sentiment_file', None),
+            emotion_file=config_dict.get('emotion_file', None)
         )
     
 class DatasetPreprocessingConfig:
@@ -95,6 +100,7 @@ class DatasetFeaturePropertiesConfig:
         sampling_rate: int,
         stft_hop_length: int,
         num_sentiments: int,
+        num_emotions: int,
     ):
         self.pitch_feature_level = pitch_feature_level
         self.energy_feature_level = energy_feature_level
@@ -103,6 +109,7 @@ class DatasetFeaturePropertiesConfig:
         self.sampling_rate = sampling_rate
         self.stft_hop_length = stft_hop_length
         self.num_sentiments = num_sentiments
+        self.num_emotions = num_emotions
     
     def __repr__(self):
         return (
@@ -113,7 +120,8 @@ class DatasetFeaturePropertiesConfig:
             f"    max_wav_value={self.max_wav_value}, \n"
             f"    sampling_rate={self.sampling_rate}, \n"
             f"    stft_hop_length={self.stft_hop_length}), \n"
-            f"    num_sentiments={self.num_sentiments}"
+            f"    num_sentiments={self.num_sentiments}, \n"
+            f"    num_emotions={self.num_emotions}"
         )
 
     def to_dict(self):
@@ -124,7 +132,8 @@ class DatasetFeaturePropertiesConfig:
             "max_wav_value": self.max_wav_value,
             "sampling_rate": self.sampling_rate,
             "stft_hop_length": self.stft_hop_length,
-            "num_sentiments": self.num_sentiments
+            "num_sentiments": self.num_sentiments,
+            "num_emotions": self.num_emotions
         }
     
     @classmethod
@@ -136,7 +145,8 @@ class DatasetFeaturePropertiesConfig:
             max_wav_value=config_dict['max_wav_value'],
             sampling_rate=config_dict['sampling_rate'],
             stft_hop_length=config_dict['stft_hop_length'],
-            num_sentiments=config_dict['num_sentiments']
+            num_sentiments=config_dict.get('num_sentiments', 0),
+            num_emotions=config_dict.get('num_emotions', 0)
         )
         
 
@@ -358,10 +368,12 @@ class ModelGlobalConfig:
         self,
         multi_speaker: bool,
         sentiment_mode: str | None,
+        emotion_mode: str | None,
         max_seq_len: int
     ):
         self.multi_speaker = multi_speaker
         self.sentiment_mode = sentiment_mode
+        self.emotion_mode = emotion_mode
         self.max_seq_len = max_seq_len
 
     def __repr__(self):
@@ -369,6 +381,7 @@ class ModelGlobalConfig:
             "ModelGlobalConfig( \n"
             f"    multi_speaker={self.multi_speaker}, \n"
             f"    sentiment_mode={self.sentiment_mode}, \n"
+            f"    emotion_mode={self.emotion_mode}, \n"
             f"    max_seq_len={self.max_seq_len})"
         )
     
@@ -376,6 +389,7 @@ class ModelGlobalConfig:
         return {
             "multi_speaker": self.multi_speaker,
             "sentiment_mode": self.sentiment_mode,
+            "emotion_mode": self.emotion_mode,
             "max_seq_len": self.max_seq_len
         }
 
@@ -384,6 +398,7 @@ class ModelGlobalConfig:
         return cls(
             multi_speaker=config_dict['multi_speaker'],
             sentiment_mode=config_dict['sentiment_mode'],
+            emotion_mode=config_dict.get('emotion_mode', None),
             max_seq_len=config_dict['max_seq_len']
         )
 

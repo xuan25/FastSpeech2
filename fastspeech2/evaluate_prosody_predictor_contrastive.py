@@ -11,7 +11,7 @@ from .model.data_models import ProsodyPredictorContrastiveLossResult, ProsodyPre
 from .model.prosody_predictor import ProsodyPredictor, ProsodyPredictorOutput
 from .utils.tools import log_prosody_predictor, log_prosody_predictor_contrastive
 from .model.loss import ProsodyPredictorContrastiveLoss, ProsodyPredictorLoss
-from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, OriginalDatasetWithSentiment
+from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, OriginalDatasetWithSentiment, DatasetWithEmotionContrastive
 
 
 def get_model_infer(ckpt_path, 
@@ -35,13 +35,24 @@ def get_dataset_loader(
     dataset_config: DatasetConfig,
     batch_size: int,
     device: str | torch.device = "cpu",
-) -> tuple[DatasetWithSentimentContrastive, DataLoader]:
+) -> tuple[DatasetWithSentimentContrastive | DatasetWithEmotionContrastive, DataLoader]:
     # Get dataset
-    dataset = DatasetWithSentimentContrastive(
-        dataset_path_config=dataset_config.path_config,
-        dataset_preprocessing_config=dataset_config.preprocessing_config,
-        split=DatasetSplit.VAL,
-    )
+    if dataset_config.path_config.sentiment_file is not None:
+        assert dataset_config.path_config.emotion_file is None
+        dataset = DatasetWithSentimentContrastive(
+            dataset_path_config=dataset_config.path_config,
+            dataset_preprocessing_config=dataset_config.preprocessing_config,
+            split=DatasetSplit.TRAIN,
+        )
+    elif dataset_config.path_config.emotion_file is not None:
+        assert dataset_config.path_config.sentiment_file is None
+        dataset = DatasetWithEmotionContrastive(
+            dataset_path_config=dataset_config.path_config,
+            dataset_preprocessing_config=dataset_config.preprocessing_config,
+            split=DatasetSplit.TRAIN,
+        )
+    else:
+        raise ValueError("Either sentiment_file or emotion_file must be specified in dataset_config.path_config.")
 
     loader = DataLoader(
         dataset,

@@ -1,4 +1,5 @@
 
+from pathlib import Path
 import pickle
 import tarfile,os
 import sys
@@ -7,16 +8,16 @@ import tqdm
 
 class DatasetFS:
     def __init__(self, base_path):
-        self.base_path = base_path
-        self.tar = tarfile.open(self.base_path)
+        self.base_path = Path(base_path)
+        self.tar = tarfile.open(self.base_path, "r")
 
         self.all_files: list[tarfile.TarInfo] = []
         self.all_folders: list[tarfile.TarInfo] = []
 
         self.file_map: dict[str, tarfile.TarInfo] = {}
 
-        index_file = f"{self.base_path}.index"
-        if os.path.exists(index_file):
+        index_file = Path(f"{self.base_path}.index")
+        if index_file.exists():
             index = pickle.load(open(index_file, "rb"))
             last_modified = index["last_modified"]
 
@@ -35,7 +36,7 @@ class DatasetFS:
         for entry in tqdm.tqdm(self.tar, desc="Indexing dataset tarball", dynamic_ncols=True):
             if entry.isfile():
                 self.all_files.append(entry)
-                self.file_map[os.path.normpath(entry.name)] = entry
+                self.file_map[Path(entry.name).as_posix()] = entry
             elif entry.isdir():
                 self.all_folders.append(entry)
 
@@ -76,17 +77,19 @@ class DatasetFS:
         assert self.tar is not None, "Dataset tarball is not open."
 
         # search for the file in the tarball
-        path_norm = os.path.normpath(path)  # Normalize the path to avoid issues with different path formats
-        if path_norm in self.file_map:
-            data = self.tar.extractfile(self.file_map[path_norm])
+        path_norm = Path(path)  # Normalize the path to avoid issues with different path formats
+        path_norm_str = path_norm.as_posix()
+        if path_norm_str in self.file_map:
+            data = self.tar.extractfile(self.file_map[path_norm_str])
             if data is not None:
                 return data
             raise ValueError(f"File {path} is not a valid file in the dataset.")
         
         # if the file is not found, check if it exists in the filesystem
-        path_escaped = os.path.join(self.base_path, path_norm)
-        if os.path.exists(path_escaped):
-            return open(path_escaped, "rb")
+        path_escaped = self.base_path / path_norm
+        path_escaped_abs = path_escaped.resolve()
+        if path_escaped_abs.exists():
+            return open(path_escaped_abs, "rb")
         
         # if the file is not found in the tarball or filesystem, raise an error
         raise FileNotFoundError(f"File {path} not found in the dataset.")

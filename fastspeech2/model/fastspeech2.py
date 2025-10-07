@@ -26,12 +26,16 @@ class FastSpeech2(nn.Module):
         self.model_config = model_config
 
         assert model_config.global_config.sentiment_mode in ["input", "input_translate", "input_translate2", "input_concat", "after_encoder", "before_prosodic_predictors", None]
+        assert model_config.global_config.emotion_mode in ["input", "input_translate2", None]
 
         self.encoder = Encoder(
             model_config.transformer_config, 
             model_config.global_config.max_seq_len,
             model_config.global_config.sentiment_mode,
-            dataset_feature_properties_config.num_sentiments if model_config.global_config.sentiment_mode in ["input", "input_translate", "input_translate2", "input_concat"] else None)
+            dataset_feature_properties_config.num_sentiments if model_config.global_config.sentiment_mode in ["input", "input_translate", "input_translate2", "input_concat"] else None,
+            model_config.global_config.emotion_mode,
+            dataset_feature_properties_config.num_emotions if model_config.global_config.emotion_mode in ["input", "input_translate2"] else None
+        )
         self.variance_adaptor = VarianceAdaptor(
             model_config.transformer_config.encoder_hidden, 
             model_config.variance_embedding_config,

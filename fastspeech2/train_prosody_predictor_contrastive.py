@@ -18,7 +18,7 @@ from .model.optimizer import ScheduledOptim
 from .utils.model import get_param_num
 from .utils.tools import log_prosody_predictor_contrastive
 from .model.loss import ProsodyPredictorContrastiveLoss
-from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive
+from .dataset.dataset import DatasetSplit, DatasetWithSentimentContrastive, DatasetWithEmotionContrastive
 
 from .evaluate_prosody_predictor_contrastive import evaluate
 
@@ -125,19 +125,31 @@ def main():
     print("Prepare training ...")
 
     # Get dataset
-    dataset = DatasetWithSentimentContrastive(
-        dataset_path_config=dataset_config.path_config,
-        dataset_preprocessing_config=dataset_config.preprocessing_config,
-        split=DatasetSplit.TRAIN,
-    )
+    if dataset_config.path_config.sentiment_file is not None:
+        assert dataset_config.path_config.emotion_file is None
+        dataset = DatasetWithSentimentContrastive(
+            dataset_path_config=dataset_config.path_config,
+            dataset_preprocessing_config=dataset_config.preprocessing_config,
+            split=DatasetSplit.TRAIN,
+        )
+    elif dataset_config.path_config.emotion_file is not None:
+        assert dataset_config.path_config.sentiment_file is None
+        dataset = DatasetWithEmotionContrastive(
+            dataset_path_config=dataset_config.path_config,
+            dataset_preprocessing_config=dataset_config.preprocessing_config,
+            split=DatasetSplit.TRAIN,
+        )
+    else:
+        raise ValueError("Either sentiment_file or emotion_file must be specified in dataset_config.path_config.")
+    
     batch_size = train_config.step_config.batch_size
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=True,
         collate_fn=dataset.collate_fn,
-        # num_workers=0,
-        num_workers=1,
+        num_workers=0,
+        # num_workers=1,
     )
 
     # Prepare model

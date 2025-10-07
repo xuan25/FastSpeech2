@@ -253,13 +253,32 @@ class ProsodyPredictorContrastiveLoss(nn.Module):
         energy_loss_pos = torch.nan_to_num(energy_loss_pos, nan=0.0)
         duration_loss_pos = torch.nan_to_num(duration_loss_pos, nan=0.0)
 
+        # Contrastive 1
         # pitch_loss = pitch_loss_std + -self.lambda_neg * pitch_loss_neg + self.lambda_pos * pitch_loss_pos
         # energy_loss = energy_loss_std + -self.lambda_neg * energy_loss_neg + self.lambda_pos * energy_loss_pos
         # duration_loss = duration_loss_std + -self.lambda_neg * duration_loss_neg + self.lambda_pos * duration_loss_pos
 
-        pitch_loss = pitch_loss_std + (self.lambda_pos * pitch_loss_pos) / (self.lambda_neg * pitch_loss_neg)
-        energy_loss = energy_loss_std + (self.lambda_pos * energy_loss_pos) / (self.lambda_neg * energy_loss_neg)
-        duration_loss = duration_loss_std + (self.lambda_pos * duration_loss_pos) / (self.lambda_neg * duration_loss_neg)
+        # Contrastive 2
+        # pitch_loss = pitch_loss_std + (self.lambda_pos * pitch_loss_pos) / (self.lambda_neg * pitch_loss_neg)
+        # energy_loss = energy_loss_std + (self.lambda_pos * energy_loss_pos) / (self.lambda_neg * energy_loss_neg)
+        # duration_loss = duration_loss_std + (self.lambda_pos * duration_loss_pos) / (self.lambda_neg * duration_loss_neg)
+
+        # Contrastive 3
+        # pitch_loss = pitch_loss_std + self.lambda_pos * torch.log(torch.exp(pitch_loss_pos) / torch.exp(pitch_loss_neg))
+        # energy_loss = energy_loss_std + self.lambda_pos * torch.log(torch.exp(energy_loss_pos) / torch.exp(energy_loss_neg))
+        # duration_loss = duration_loss_std + self.lambda_pos * torch.log(torch.exp(duration_loss_pos) / torch.exp(duration_loss_neg))
+
+        # Contrastive 4
+        # pitch_loss = torch.log(torch.exp(pitch_loss_std) / torch.exp(pitch_loss_neg))
+        # energy_loss = torch.log(torch.exp(energy_loss_std) / torch.exp(energy_loss_neg))
+        # duration_loss = torch.log(torch.exp(duration_loss_std) / torch.exp(duration_loss_neg))
+
+        # Contrastive 5
+        pitch_loss = pitch_loss_std + self.lambda_pos * -torch.log(torch.exp(-pitch_loss_pos) / (torch.exp(-pitch_loss_pos) + torch.exp(-pitch_loss_neg)))
+        energy_loss = energy_loss_std + self.lambda_pos * -torch.log(torch.exp(-energy_loss_pos) / (torch.exp(-energy_loss_pos) + torch.exp(-energy_loss_neg)))
+        duration_loss = duration_loss_std + self.lambda_pos * -torch.log(torch.exp(-duration_loss_pos) / (torch.exp(-duration_loss_pos) + torch.exp(-duration_loss_neg)))
+
+
 
         total_loss = (
             duration_loss + pitch_loss + energy_loss
@@ -509,9 +528,9 @@ class ProsodyPredictorContrastiveLoss2(nn.Module):
         # energy_loss = energy_loss_std + -self.lambda_neg * energy_loss_neg + self.lambda_pos * energy_loss_pos
         # duration_loss = duration_loss_std + -self.lambda_neg * duration_loss_neg + self.lambda_pos * duration_loss_pos
 
-        pitch_loss = pitch_loss_std + (self.lambda_pos * pitch_loss_pos) / (self.lambda_neg * pitch_loss_neg)
-        energy_loss = energy_loss_std + (self.lambda_pos * energy_loss_pos) / (self.lambda_neg * energy_loss_neg)
-        duration_loss = duration_loss_std + (self.lambda_pos * duration_loss_pos) / (self.lambda_neg * duration_loss_neg)
+        pitch_loss = pitch_loss_std + (self.lambda_pos * pitch_loss_pos) / (pitch_loss_neg)
+        energy_loss = energy_loss_std + (self.lambda_pos * energy_loss_pos) / (energy_loss_neg)
+        duration_loss = duration_loss_std + (self.lambda_pos * duration_loss_pos) / (duration_loss_neg)
 
         total_loss = (
             duration_loss + pitch_loss + energy_loss

@@ -177,77 +177,20 @@ tasks = [
     Task(
         anchors_shared,
         [
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.5/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
+            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-0.1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
 
         ],
-        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive2-0.5.png"),
-        label="prosody-predictor_sentiment-input_contrastive2-0.5",
+        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive2-0.1.png"),
+        label="prosody-predictor_sentiment-input_contrastive2-0.1",
     ),
-
-    Task(
-        anchors_shared,
-        [
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
-            Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input-1/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
-
-        ],
-        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input_contrastive2-1.png"),
-        label="prosody-predictor_sentiment-input_contrastive2-1",
-    ),
-
-    # Task(
-    #     anchors_shared,
-    #     [
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_90k_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
-
-    #     ],
-    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_90k_sentiment-input-translate2_contrastive2-10.png"),
-    #     label="prosody-predictor_90k_sentiment-input-translate2_contrastive2-10",
-    # ),
-
-    
-    # Task(
-    #     anchors_shared,
-    #     [
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neu.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEU),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neu.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEU),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neu.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEU),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neg.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.NEG),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neg.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.NEG),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_neg.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.NEG),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_pos.csv"), Sentiment.NEG, "pitch", sentiment_mapping, Sentiment.NEG, Sentiment.POS),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_pos.csv"), Sentiment.NEU, "pitch", sentiment_mapping, Sentiment.NEU, Sentiment.POS),
-    #         Target.make(Path("output/prosody_predictor_contrastive2/sentiment_input_translate2-10/pred/val_pos.csv"), Sentiment.POS, "pitch", sentiment_mapping, Sentiment.POS, Sentiment.POS),
-
-    #     ],
-    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_sentiment-input-translate2_contrastive2-10.png"),
-    #     label="prosody-predictor_sentiment-input-translate2_contrastive2-10",
-    # ),
-
-    
 
     # Task(
     #     anchors_shared,
@@ -814,7 +757,7 @@ def main() -> None:
     # tasks = build_example_tasks(mapping)
 
     # vertices keyed by sentiment
-    verts = triangle_vertices_by_sentiment(scale=0.4)
+    verts = triangle_vertices_by_sentiment(scale=1.0)
 
     for task in tasks:
         trilaterate, order_sents, (A, B, C) = make_trilaterator_from_task(task.anchors, verts)
