@@ -49,6 +49,26 @@ python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/d
 
 
 
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.yaml --model_config config/LibriTTS/model_emotion_input.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input-0
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.yaml --model_config config/LibriTTS/model_emotion_input_translate2.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input_translate2-0
+
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.1.yaml --model_config config/LibriTTS/model_emotion_input.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input-0.1
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.1.yaml --model_config config/LibriTTS/model_emotion_input_translate2.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input_translate2-0.1
+
+
+
+
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.01.yaml --model_config config/LibriTTS/model_emotion_input.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input-0.01-B
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.01.yaml --model_config config/LibriTTS/model_emotion_input.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input-0.01-C
+
+python train_prosody_predictor_contrastive.py --dataset_config config/LibriTTS/dataset_emotion.yaml --train_config config/LibriTTS/train_prosody_predictor_contrastive-0.1.yaml --model_config config/LibriTTS/model_emotion_input.yaml --output_dir output/prosody_predictor_contrastive5/emotion_input-0.1-B
+
+
 
 # pred
 

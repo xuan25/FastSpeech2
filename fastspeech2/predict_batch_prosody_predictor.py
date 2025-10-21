@@ -48,7 +48,7 @@ def get_model_infer(ckpt_path,
 
     model = ProsodyPredictor(model_config, dataset_feature_properties_config, dataset_feature_stats).to(device)
     if ckpt_path:
-        ckpt = torch.load(ckpt_path)
+        ckpt = torch.load(ckpt_path, map_location=device)
         model.load_state_dict(ckpt["model"])
 
     model.eval()

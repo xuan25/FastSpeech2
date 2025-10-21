@@ -64,10 +64,10 @@ def get_dataset_loader(
 
     return dataset, loader
 
-def evaluate(model, step,
-             batch_size,
+def evaluate(model: ProsodyPredictor, step: int,
+             batch_size: int,
              dataset_config: DatasetConfig,
-                loss_config: LossConfig,
+             loss_config: LossConfig,
              logger=None, device: str | torch.device="cpu"):
 
     # Get dataset
@@ -107,9 +107,35 @@ def evaluate(model, step,
         duration_loss=torch.tensor(0.0, device=device),
         total_loss=torch.tensor(0.0, device=device),
     )
+
     
-    batch_torch: DataBatchTorch|None = None
-    output: ProsodyPredictorOutput|None = None
+
+
+    from .model.loss import ProsodyPredictorWassersteinLoss
+    
+    @lru_cache(maxsize=None)
+    def get_wasserstein_loss_f(dataset, batch_size, dataset_config) -> ProsodyPredictorWassersteinLoss:
+        loader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            collate_fn=dataset.collate_fn,
+            num_workers=0
+        )
+        wasserstein_loss_f = ProsodyPredictorWassersteinLoss(
+            dataset_config.feature_properties_config,
+            loader).to(device)
+        return wasserstein_loss_f
+    
+    wasserstein_loss_f = get_wasserstein_loss_f(dataset, batch_size, dataset_config)
+    wasserstein_loss_f.reset()
+
+
+
+
+    
+    batch_torch: DataBatchTorch | None = None
+    output: ProsodyPredictorOutput | None = None
     for batch, contrastive_mask in loader:
         batch: DataBatch = batch
         batch_torch = batch.to_torch(device)
@@ -119,6 +145,8 @@ def evaluate(model, step,
         with torch.no_grad():
             # Forward
             output = model(batch_torch)
+
+            assert output is not None
 
             # Cal Loss
             losses: ProsodyPredictorContrastiveLossResult = loss_func(batch_torch, output, contrastive_mask)
@@ -143,6 +171,11 @@ def evaluate(model, step,
             loss_sums.total_loss += losses.total_loss.item() * batch_size_std
 
 
+
+
+            wasserstein_loss_f.update(batch_torch, output)
+
+
     loss_means = ProsodyPredictorContrastiveLossResult(
         pitch_loss_std=loss_sums.pitch_loss_std / len(dataset),
         energy_loss_std=loss_sums.energy_loss_std / len(dataset),
@@ -158,6 +191,19 @@ def evaluate(model, step,
         duration_loss=loss_sums.duration_loss / len(dataset),
         total_loss=loss_sums.total_loss / len(dataset),
     )
+
+
+
+
+    negative_distance_nll_pitch, negative_distance_nll_energy, negative_distance_nll_duration = wasserstein_loss_f.compute_negative_distance_nll()
+
+    if logger is not None:
+        logger.add_scalar("Loss/ndnll_pitch", negative_distance_nll_pitch, step)
+        logger.add_scalar("Loss/ndnll_energy", negative_distance_nll_energy, step)
+        logger.add_scalar("Loss/ndnll_duration", negative_distance_nll_duration, step)
+
+
+
 
     message = (
         "Validation Step {}, Total Loss: {:.4f}, Pitch Loss: {:.4f}, Energy Loss: {:.4f}, Duration Loss: {:.4f}".format(

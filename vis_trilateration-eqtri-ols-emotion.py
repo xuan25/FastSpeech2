@@ -156,6 +156,7 @@ class Task:
     targets: List[Target]
     output: Path
     label: str = ""
+    scale: float = 1.0
 
 
 emotion_mapping = load_emotion_mapping(Path("data/emotion_meld.csv"))
@@ -177,38 +178,254 @@ tasks = [
     Task(
         anchors_shared,
         [
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
 
         ],
-        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive4-0.01_40k.png"),
-        label="prosody-predictor_emotion-input-translate4_contrastive42-0.01_40k",
+        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0.01-B_80k.png"),
+        label="prosody-predictor_emotion-input_contrastive5-0.01-B_80k",
+        scale=0.4
     ),
 
     Task(
         anchors_shared,
         [
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
-            Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+            Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01-B/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
 
         ],
-        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive4-0.01_80k.png"),
-        label="prosody-predictor_emotion-input0translate4_contrastive2-0.01_80k",
-    ),    
+        output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0.01-B_40k.png"),
+        label="prosody-predictor_emotion-input_contrastive5-0.01-B_40k",
+        scale=0.4
+    ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.1/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0.1_40k.png"),
+    #     label="prosody-predictor_emotion-input_contrastive5-0.1_40k",
+    #     scale=0.4
+    # ),
+
+
+    
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0_40k.png"),
+    #     label="prosody-predictor_emotion-input_contrastive5-0_40k",
+    #     scale=0.4
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0_80k.png"),
+    #     label="prosody-predictor_emotion-input_contrastive5-0_80k",
+    #     scale=0.4,
+    # ),    
+
+    
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive5-0_40k.png"),
+    #     label="prosody-predictor_emotion-input-translate2_contrastive5-0_40k",
+    #     scale=1
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive5-0_80k.png"),
+    #     label="prosody-predictor_emotion-input-translate2_contrastive5-0_80k",
+    #     scale=1
+    # ),  
+
+        
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0.01_40k.png"),
+    #     label="prosody-predictor_emotion-input_contrastive5-0.01_40k",
+    #     scale=0.4
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input-0.01/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input_contrastive5-0.01_80k.png"),
+    #     label="prosody-predictor_emotion-input_contrastive5-0.01_80k",
+    #     scale=0.4,
+    # ),    
+
+    
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive5-0.01_40k.png"),
+    #     label="prosody-predictor_emotion-input-translate2_contrastive5-0.01_40k",
+    #     scale=1
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive5/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive5-0.01_80k.png"),
+    #     label="prosody-predictor_emotion-input-translate2_contrastive5-0.01_80k",
+    #     scale=1
+    # ),    
+
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_40k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive4-0.01_40k.png"),
+    #     label="prosody-predictor_emotion-input-translate4_contrastive42-0.01_40k",
+    # ),
+
+    # Task(
+    #     anchors_shared,
+    #     [
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_neutral_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.NEU),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_sadness_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.SAD),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.SAD, "pitch", emotion_mapping, Sentiment.SAD, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.NEU, "pitch", emotion_mapping, Sentiment.NEU, Sentiment.JOY),
+    #         Target.make(Path("output/prosody_predictor_contrastive4/emotion_input_translate2-0.01/pred/val_joy_80k.csv"), Sentiment.JOY, "pitch", emotion_mapping, Sentiment.JOY, Sentiment.JOY),
+
+    #     ],
+    #     output=Path("output/plots/trilateration-eqtri-ols/prosody-predictor_emotion-input-translate2_contrastive4-0.01_80k.png"),
+    #     label="prosody-predictor_emotion-input0translate4_contrastive2-0.01_80k",
+    # ),    
 
     # Task(
     #     anchors_shared,
@@ -517,13 +734,13 @@ def plot_embedding(
     shape_handles = [
         Line2D([0],[0], marker=orig_to_marker[Sentiment.JOY], linestyle="None",
                markersize=MARKER_SIZE*0.85, markerfacecolor="none",
-               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="POS"),
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="JOY"),
         Line2D([0],[0], marker=orig_to_marker[Sentiment.NEU], linestyle="None",
                markersize=MARKER_SIZE*0.85, markerfacecolor="none",
                markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="NEU"),
         Line2D([0],[0], marker=orig_to_marker[Sentiment.SAD], linestyle="None",
                markersize=MARKER_SIZE*0.85, markerfacecolor="none",
-               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="NEG"),
+               markeredgecolor="black", markeredgewidth=EDGE_WIDTH, label="SAD"),
     ]
     anchor_fill_handles = [
         Line2D([0], [0],
@@ -534,7 +751,7 @@ def plot_embedding(
             markeredgecolor=ANCHOR_EDGE_COLOR, markeredgewidth=ANCHOR_EDGEW,
             fillstyle=target_to_fill[Sentiment.JOY],
             alpha=ANCHOR_ALPHA,
-            label='GT_POS'),
+            label='GT_JOY'),
         Line2D([0], [0],
             marker=orig_to_marker[Sentiment.NEU], linestyle='None',
             markersize=ANCHOR_SIZE * 0.85,
@@ -552,13 +769,13 @@ def plot_embedding(
             markeredgecolor=ANCHOR_EDGE_COLOR, markeredgewidth=ANCHOR_EDGEW,
             fillstyle=target_to_fill[Sentiment.SAD],
             alpha=ANCHOR_ALPHA,
-            label='GT_NEG'),
+            label='GT_SAD'),
     ]
     fill_handles = [
         Line2D([0],[0], marker="o", linestyle="None", markersize=MARKER_SIZE*0.85,
                markerfacecolor="black", markerfacecoloralt="white",
                markeredgecolor="black", markeredgewidth=EDGE_WIDTH,
-               fillstyle=target_to_fill[Sentiment.JOY], label="TGT_POS"),
+               fillstyle=target_to_fill[Sentiment.JOY], label="TGT_JOY"),
         Line2D([0],[0], marker="o", linestyle="None", markersize=MARKER_SIZE*0.85,
                markerfacecolor="none", markerfacecoloralt="white",
                markeredgecolor="black", markeredgewidth=EDGE_WIDTH,
@@ -566,7 +783,7 @@ def plot_embedding(
         Line2D([0],[0], marker="o", linestyle="None", markersize=MARKER_SIZE*0.85,
                markerfacecolor="black", markerfacecoloralt="white",
                markeredgecolor="black", markeredgewidth=EDGE_WIDTH,
-               fillstyle=target_to_fill[Sentiment.SAD], label="TGT_NEG"),
+               fillstyle=target_to_fill[Sentiment.SAD], label="TGT_SAD"),
     ]
 
     legend_shape = ax.legend(handles=shape_handles, title="Original sentiment (shape)",
@@ -598,10 +815,11 @@ def plot_embedding(
 # =========================
 def main() -> None:
 
-    # vertices keyed by sentiment
-    verts = triangle_vertices_by_sentiment(scale=0.4)
 
     for task in tasks:
+        # vertices keyed by sentiment
+        verts = triangle_vertices_by_sentiment(scale=task.scale)
+
         trilaterate, order_emots, (A, B, C) = make_trilaterator_from_task(task.anchors, verts)
 
         dist_ordered = compute_wasserstein_distances_in_order(task.anchors, task.targets)

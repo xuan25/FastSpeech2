@@ -1,11 +1,207 @@
+from typing import Any
 import torch
 import torch.nn as nn
 
 from ..config import DatasetFeaturePropertiesConfig
 
 from ..dataset.data_models import DataBatchTorch
-from .fastspeech2 import FastSpeech2Output
+from .fastspeech2 import DataBatch, FastSpeech2Output
 from .data_models import FastSpeech2LossResult, ProsodyPredictorContrastiveLossResult, ProsodyPredictorLossResult, ProsodyPredictorOutput
+
+
+import numpy as np
+import numpy.typing as npt
+
+class ProsodyPredictorWassersteinLoss(nn.Module):
+    """ ProsodyPredictorWassersteinLoss """
+
+    def __init__(self, dataset_feature_properties_config: DatasetFeaturePropertiesConfig, dataloader: torch.utils.data.DataLoader):
+        super(ProsodyPredictorWassersteinLoss, self).__init__()
+
+        assert dataset_feature_properties_config.num_emotions > 0, "num_emotions must be greater than 0, sentiment not implemented yet"
+
+        num_categories = dataset_feature_properties_config.num_emotions
+
+        self.pitch_feature_level = dataset_feature_properties_config.pitch_feature_level
+        self.energy_feature_level = dataset_feature_properties_config.energy_feature_level
+
+        # TODO: refactor this to use a config enum
+        assert self.pitch_feature_level in [
+            "phoneme_level",
+            "frame_level",
+        ], f"Invalid pitch feature level: {self.pitch_feature_level}"
+
+        assert self.energy_feature_level in [
+            "phoneme_level",
+            "frame_level",
+        ], f"Invalid energy feature level: {self.energy_feature_level}"
+
+        assert self.pitch_feature_level == "phoneme_level", "ProsodyPredictorWassersteinLoss only supports phoneme level pitch feature"
+        assert self.energy_feature_level == "phoneme_level", "ProsodyPredictorWassersteinLoss only supports phoneme level energy feature"
+
+
+        assert num_categories > 1, "num_categories must be greater than 1"
+
+
+        self.num_categories = num_categories
+        # load anchor points for wasserstein distance calculation
+
+        # anchors_duration: list[list[float]] = []
+        # anchors_pitch: list[list[float]] = []
+        # anchors_energy: list[list[float]] = []
+
+        # for sample_idx in range(num_categories):
+        #     anchors_duration.append([])
+        #     anchors_pitch.append([])
+        #     anchors_energy.append([])
+        
+        self.reset()
+
+        labels_gt_li = []
+        durations_gt_li = []
+        pitches_gt_li = []
+        energies_gt_li = []
+
+        for batch, contrastive_mask in dataloader:
+            batch: DataBatch = batch
+            assert batch.pitches is not None, "pitch_targets is None"
+            assert batch.energies is not None, "energy_targets is None"
+            assert batch.durations is not None, "duration_targets is None"
+            assert batch.emotions is not None, "emotions is None"
+
+            # mask all gt samples as anchors
+            batch_mask_gt: npt.NDArray[np.intp] = contrastive_mask == 0
+            batch_durations_gt: npt.NDArray[np.float64] = batch.durations[batch_mask_gt]
+            batch_pitches_gt: npt.NDArray[np.float64] = batch.pitches[batch_mask_gt]
+            batch_energies_gt: npt.NDArray[np.float64] = batch.energies[batch_mask_gt]
+            batch_labels_gt: npt.NDArray[np.intp] = batch.emotions[batch_mask_gt]
+            
+            # process each gt sample in the anchers of this batch
+            for sample_idx in range(batch_labels_gt.shape[0]):
+
+                text_len: npt.NDArray[np.intp] = batch.text_lens[sample_idx]
+
+                label: npt.NDArray[np.intp] = batch_labels_gt[sample_idx]
+                duration: npt.NDArray[np.float64] = batch_durations_gt[sample_idx][:text_len]
+                pitch: npt.NDArray[np.intp] = batch_pitches_gt[sample_idx][:text_len]
+                energy: npt.NDArray[np.intp] = batch_energies_gt[sample_idx][:text_len]
+
+                labels_gt_li.extend([label.item()] * text_len)
+                durations_gt_li.extend(duration)
+                pitches_gt_li.extend(pitch)
+                energies_gt_li.extend(energy)
+
+        labels_gt: npt.NDArray[np.int64] = np.array(labels_gt_li)
+        durations_gt: npt.NDArray[np.float64] = np.array(durations_gt_li)
+        pitches_gt: npt.NDArray[np.float64] = np.array(pitches_gt_li)
+        energies_gt: npt.NDArray[np.float64] = np.array(energies_gt_li)
+
+        # convert lists to tensors: list[num_categorise] of tensors[num_samples_flattened]
+        self.anchors_duration: list[torch.Tensor] = []
+        self.anchors_pitch: list[torch.Tensor] = []
+        self.anchors_energy: list[torch.Tensor] = []
+
+        # TODO: expose device as a parameter
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        for i in range(num_categories):
+
+            anchor_mask: npt.NDArray[np.bool] = np.array(labels_gt) == i
+
+            anchor_durations_gt = durations_gt[anchor_mask]
+            anchor_pitches_gt = pitches_gt[anchor_mask]
+            anchor_energies_gt = energies_gt[anchor_mask]
+
+            self.anchors_duration.append(torch.tensor(anchor_durations_gt).to(device))
+            self.anchors_pitch.append(torch.tensor(anchor_pitches_gt).to(device))
+            self.anchors_energy.append(torch.tensor(anchor_energies_gt).to(device))
+    
+    def reset(self):
+        self.tgt_durations: list[list[torch.Tensor]] = []
+        self.tgt_pitches: list[list[torch.Tensor]] = []
+        self.tgt_energies:list[list[torch.Tensor]] = []
+
+        for i in range(self.num_categories):
+            self.tgt_durations.append([])
+            self.tgt_pitches.append([])
+            self.tgt_energies.append([])
+
+    def update(self, inputs: DataBatchTorch, predictions: ProsodyPredictorOutput) -> Any:
+
+        labels = inputs.emotions
+
+        assert labels is not None, "labels is None"
+
+        for i in range(labels.shape[0]):
+            label = labels[i]
+            pred_pitch = predictions.pitch_predictions[i]
+            pred_energy = predictions.energy_predictions[i]
+            pred_duration = predictions.log_duration_predictions[i]
+
+            self.tgt_durations[label].append(pred_duration)
+            self.tgt_pitches[label].append(pred_pitch)
+            self.tgt_energies[label].append(pred_energy)
+
+    def negative_distance_nll(self, pred_vals:torch.Tensor, anchors_vals:list[torch.Tensor], tgt_anchor_idx:int) -> torch.Tensor:
+        # softmax score
+        from scipy.stats import wasserstein_distance
+
+        scores = []
+        for i in range(len(anchors_vals)):
+            if len(anchors_vals[i]) > 0 and len(pred_vals) > 0:
+                anchors_val = anchors_vals[i]
+                dist = wasserstein_distance(anchors_val.cpu(), pred_vals.cpu())
+                scores.append(-dist)
+            else:
+                # distances.append(float('inf'))
+                raise ValueError("No anchor points for category {}".format(i))
+        
+        scores = torch.tensor(scores, device=pred_vals.device)
+
+        ndnnl = -torch.log(torch.exp(scores[tgt_anchor_idx]) / torch.sum(torch.exp(scores)))
+
+        return ndnnl
+
+    # def compute_soft_distance(self) -> Any:
+    #     from scipy.stats import wasserstein_distance
+    #     pitch_loss = 0.0
+    #     energy_loss = 0.0
+    #     duration_loss = 0.0
+
+    #     for i in range(self.num_categories):
+    #         if len(self.anchors_duration[i]) > 0 and len(self.tgt_durations[i]) > 0:
+    #             duration_loss += wasserstein_distance(self.anchors_duration[i], self.tgt_durations[i])
+    #         if len(self.anchors_pitch[i]) > 0 and len(self.tgt_pitches[i]) > 0:
+    #             pitch_loss += wasserstein_distance(self.anchors_pitch[i], self.tgt_pitches[i])
+    #         if len(self.anchors_energy[i]) > 0 and len(self.tgt_energies[i]) > 0:
+    #             energy_loss += wasserstein_distance(self.anchors_energy[i], self.tgt_energies[i])
+
+    #     return pitch_loss, energy_loss, duration_loss
+
+    def compute_negative_distance_nll(self) -> tuple[float, float, float]:
+
+        ndnll_duration_mean = 0.0
+        ndnll_pitch_mean = 0.0
+        ndnll_energy_mean = 0.0
+
+        for i in range(self.num_categories):
+
+            pred_durations = torch.concat(self.tgt_durations[i])
+            ndnll_duration = self.negative_distance_nll(pred_durations, self.anchors_duration, i)
+            ndnll_duration_mean += ndnll_duration.item() / self.num_categories
+
+            pred_pitches = torch.concat(self.tgt_pitches[i])
+            ndnll_pitch = self.negative_distance_nll(pred_pitches, self.anchors_pitch, i)
+            ndnll_pitch_mean += ndnll_pitch.item() / self.num_categories
+
+            pred_energies = torch.concat(self.tgt_energies[i])
+            ndnll_energy = self.negative_distance_nll(pred_energies, self.anchors_energy, i)
+            ndnll_energy_mean += ndnll_energy.item() / self.num_categories
+
+        return ndnll_pitch_mean, ndnll_energy_mean, ndnll_duration_mean
+        
+
+
 
 class FastSpeech2Loss(nn.Module):
     """ FastSpeech2 Loss """

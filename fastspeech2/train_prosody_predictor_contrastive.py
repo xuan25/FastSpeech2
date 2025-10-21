@@ -239,6 +239,7 @@ def main():
 
                 log_prosody_predictor_contrastive(train_logger, step, losses=losses)
 
+            # if step % val_step == 0 or True:
             if step % val_step == 0:
                 model.eval()
                 message = evaluate(
