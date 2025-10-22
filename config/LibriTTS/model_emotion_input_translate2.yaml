@@ -22,8 +22,7 @@ variance_embedding:
 
 multi_speaker: True
 
-sentiment_mode: null
-emotion_mode: "input_translate2"
+label_embedding_mode: "input_translate2"
 
 max_seq_len: 1000
 

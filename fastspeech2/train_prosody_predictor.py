@@ -18,7 +18,7 @@ from .model.optimizer import ScheduledOptim
 from .utils.model import get_param_num
 from .utils.tools import log_prosody_predictor
 from .model.loss import ProsodyPredictorLoss
-from .dataset.dataset import DatasetSplit, OriginalDatasetWithSentiment
+from .dataset.dataset import DatasetSplit, DatasetWithLabel
 
 from .evaluate_prosody_predictor import evaluate
 
@@ -125,7 +125,7 @@ def main():
     print("Prepare training ...")
 
     # Get dataset
-    dataset = OriginalDatasetWithSentiment(
+    dataset = DatasetWithLabel(
         dataset_path_config=dataset_config.path_config,
         dataset_preprocessing_config=dataset_config.preprocessing_config,
         split=DatasetSplit.TRAIN,

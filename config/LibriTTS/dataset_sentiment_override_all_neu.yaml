@@ -5,7 +5,7 @@ path:
   speaker_map_file: "speakers.json"
   feature_dir: ""
   stats_file: "stats.json"
-  sentiment_file: "../overrides/sentiment_scores_override_all_neu.csv"
+  label_file: "../overrides/sentiment_scores_override_all_neu.csv"
 
 properties:
   pitch_feature_level: "phoneme_level" # support 'phoneme_level' or 'frame_level'
@@ -14,7 +14,7 @@ properties:
   max_wav_value: 32768.0
   sampling_rate: 22050
   stft_hop_length: 256
-  num_sentiments: 3
+  num_label_categories: 3
 
 preprocessing:
   lexicon_path: "../../lexicon/librispeech-lexicon.txt"

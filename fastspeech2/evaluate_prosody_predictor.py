@@ -11,7 +11,7 @@ from .model.data_models import ProsodyPredictorLossResult
 from .model.prosody_predictor import ProsodyPredictor, ProsodyPredictorOutput
 from .utils.tools import log_prosody_predictor
 from .model.loss import ProsodyPredictorLoss
-from .dataset.dataset import DatasetSplit, OriginalDatasetWithSentiment
+from .dataset.dataset import DatasetSplit, DatasetWithLabel
 
 
 def get_model_infer(ckpt_path, 
@@ -35,9 +35,9 @@ def get_dataset_loader(
     dataset_config: DatasetConfig,
     batch_size: int,
     device: str | torch.device = "cpu",
-) -> tuple[OriginalDatasetWithSentiment, DataLoader]:
+) -> tuple[DatasetWithLabel, DataLoader]:
     # Get dataset
-    dataset = OriginalDatasetWithSentiment(
+    dataset = DatasetWithLabel(
         dataset_path_config=dataset_config.path_config,
         dataset_preprocessing_config=dataset_config.preprocessing_config,
         split=DatasetSplit.VAL,
@@ -53,8 +53,8 @@ def get_dataset_loader(
 
     return dataset, loader
 
-def evaluate(model, step,
-             batch_size,
+def evaluate(model: ProsodyPredictor | torch.nn.DataParallel[ProsodyPredictor], step: int,
+             batch_size: int,
              dataset_config: DatasetConfig,
              logger=None, device: str | torch.device="cpu"):
 

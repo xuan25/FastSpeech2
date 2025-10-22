@@ -1,11 +1,11 @@
 path:
-  base_dir: "../../data/MELD.tar"
+  base_dir: "../data/expresso.tar"
   meta_file_train: "train.csv"
   meta_file_val: "dev.csv"
   speaker_map_file: "speakers.json"
   feature_dir: ""
   stats_file: "stats.json"
-  label_file: "../../data/meld_emotion.csv"
+  label_file: null
 
 properties:
   pitch_feature_level: "phoneme_level" # support 'phoneme_level' or 'frame_level'

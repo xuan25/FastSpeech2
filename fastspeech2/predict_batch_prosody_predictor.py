@@ -18,10 +18,10 @@ from .config import (
     ModelConfig, 
 )
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
-from .dataset.dataset import DatasetSplit, TextOnlyDatasetWithSentiment, TextOnlyDatasetWithEmotion
+from .dataset.dataset import DatasetSplit, TextOnlyDatasetWithLabel
 
 torch.serialization.add_safe_globals([
-    np._core.multiarray.scalar, 
+    # np._core.multiarray.scalar, 
     np.dtype, np.dtypes.Float64DType, 
     # DatasetConfig, DatasetPathConfig, 
     # DatasetFeaturePropertiesConfig, 
@@ -55,8 +55,8 @@ def get_model_infer(ckpt_path,
     # model.requires_grad_ = False
     model.requires_grad_(False)
     return model
-
-def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_config_path: str, data_split_name: str, pitch_control: float, energy_control: float, duration_control: float, batch_size: int, sentiment_control: int, emotion_control: int):
+    
+def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_config_path: str, data_split_name: str, pitch_control: float, energy_control: float, duration_control: float, batch_size: int, label_control: int):
     control_values = pitch_control, energy_control, duration_control
     dataset_config = DatasetConfig.load_from_yaml(dataset_config_path)
     model_config = ModelConfig.load_from_yaml(model_config_path)
@@ -79,25 +79,11 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
     model: ProsodyPredictor = get_model_infer(ckpt_path, model_config, dataset_config.feature_properties_config, dataset_feature_stats, device)
 
     # Get dataset
-    # dataset = TextOnlyDatasetWithSentiment(
-    #     dataset_config.path_config,
-    #     dataset_config.preprocessing_config,
-    #     data_split
-    # )
-    if dataset_config.path_config.emotion_file:
-        dataset = TextOnlyDatasetWithEmotion(
-            dataset_config.path_config,
-            dataset_config.preprocessing_config,
-            data_split
-        )
-    elif dataset_config.path_config.sentiment_file:
-        dataset = TextOnlyDatasetWithSentiment(
-            dataset_config.path_config,
-            dataset_config.preprocessing_config,
-            data_split
-        )
-    else:
-        raise ValueError("No emotion or sentiment file provided in dataset config.")
+    dataset = TextOnlyDatasetWithLabel(
+        dataset_config.path_config,
+        dataset_config.preprocessing_config,
+        data_split
+    )
 
     batchs = DataLoader(
         dataset,
@@ -112,21 +98,16 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
 
     with open(output_path, "w", encoding="utf-8", newline="") as f:
         csv_writer = csv.writer(f)
-        csv_writer.writerow(["data_id", "phone_idx", "phone", "pitch", "energy", "duration", "sentiment", "sentiment_source", "emotion", "emotion_source"])
+        csv_writer.writerow(["data_id", "phone_idx", "phone", "pitch", "energy", "duration", "label", "label_source"])
 
         for batch in tqdm.tqdm(batchs, desc="[Decoding]", dynamic_ncols=True):
             batch: DataBatch = batch
 
-            if sentiment_control >= 0:
+            if label_control >= 0:
                 for i, sample in enumerate(batch):
-                    sample.sentiment = sentiment_control
-                assert batch.sentiments is not None
-                batch.sentiments = np.array([sentiment_control] * batch.sentiments.shape[0], dtype=np.int64)
-            if emotion_control >= 0:
-                for i, sample in enumerate(batch):
-                    sample.emotion = emotion_control
-                assert batch.emotions is not None
-                batch.emotions = np.array([emotion_control] * batch.emotions.shape[0], dtype=np.int64)
+                    sample.label = label_control
+                assert batch.labels is not None
+                batch.labels = np.array([label_control] * batch.labels.shape[0], dtype=np.int64)
 
             batch_torch: DataBatchTorch = batch.to_torch(device)
             with torch.no_grad():
@@ -147,7 +128,7 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
                         duration = torch.exp(duration_log).item()  # Convert log duration to actual duration
                         from .text.symbols import symbols
                         phone_alphabet = symbols[phone]
-                        csv_writer.writerow([sample_id, j, phone_alphabet, pitch, energy, duration, sample.sentiment, sample.sentiment_source, sample.emotion, sample.emotion_source])
+                        csv_writer.writerow([sample_id, j, phone_alphabet, pitch, energy, duration, sample.label, sample.label_source])
 
 def main():
 
@@ -210,16 +191,10 @@ def main():
         help="batch size for synthesis",
     )
     parser.add_argument(
-        "--sentiment_control",
+        "--label_control",
         type=int,
         default=-1,
-        help="control the sentiment of the whole utterance, -1 for no control",
-    )
-    parser.add_argument(
-        "--emotion_control",
-        type=int,
-        default=-1,
-        help="control the emotion of the whole utterance, -1 for no control",
+        help="control the label of the whole utterance, -1 for no control",
     )
     args = parser.parse_args()
 
@@ -233,8 +208,7 @@ def main():
         energy_control=args.energy_control,
         duration_control=args.duration_control,
         batch_size=args.batch_size,
-        sentiment_control=args.sentiment_control,
-        emotion_control=args.emotion_control
+        label_control=args.label_control,
     )
 
 if __name__ == "__main__":

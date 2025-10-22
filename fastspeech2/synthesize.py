@@ -75,10 +75,10 @@ def main():
         help="speaker ID for multi-speaker synthesis",
     )
     parser.add_argument(
-        "--sentiment_id",
+        "--label_id",
         type=int,
         default=0,
-        help="sentiment ID for multi-sentiment synthesis",
+        help="label ID for multi-label synthesis",
     )
     parser.add_argument(
         "--ckpt_path", 
@@ -129,7 +129,7 @@ def main():
     raw_text = args.text
     lang = args.lang
     speaker_id = args.speaker_id
-    sentiment_id = args.sentiment_id
+    label_id = args.label_id
 
     ckpt_path = args.ckpt_path
     output_dir = args.output_dir
@@ -171,7 +171,7 @@ def main():
         pitch=None,
         energy=None,
         duration=None,
-        sentiment=sentiment_id,
+        label=label_id,
     )
 
     batch = DataBatch([data_sample])   # create a batch with a single sample

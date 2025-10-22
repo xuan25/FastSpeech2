@@ -11,17 +11,17 @@ from .model.data_models import FastSpeech2LossResult
 from .model.fastspeech2 import FastSpeech2Output
 from .utils.model import get_model_infer
 from .utils.tools import log, synth_one_sample
-from .model import FastSpeech2Loss
-from .dataset.dataset import DatasetSplit, OriginalDatasetWithSentiment
+from .model import FastSpeech2, FastSpeech2Loss
+from .dataset.dataset import DatasetSplit, DatasetWithLabel
 
 @lru_cache(maxsize=None)
 def get_dataset_loader(
     dataset_config: DatasetConfig,
     batch_size: int,
     device: str | torch.device = "cpu",
-) -> tuple[OriginalDatasetWithSentiment, DataLoader]:
+) -> tuple[DatasetWithLabel, DataLoader]:
     # Get dataset
-    dataset = OriginalDatasetWithSentiment(
+    dataset = DatasetWithLabel(
         dataset_path_config=dataset_config.path_config,
         dataset_preprocessing_config=dataset_config.preprocessing_config,
         split=DatasetSplit.VAL,
@@ -37,8 +37,8 @@ def get_dataset_loader(
 
     return dataset, loader
 
-def evaluate(model, step,
-             batch_size,
+def evaluate(model: FastSpeech2 | torch.nn.DataParallel[FastSpeech2], step: int,
+             batch_size: int,
              dataset_config: DatasetConfig,
              vocoder_config: ModelVocoderConfig,
              stats: DatasetFeatureStats,

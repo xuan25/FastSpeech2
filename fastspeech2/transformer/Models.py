@@ -35,7 +35,7 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
 class Encoder(nn.Module):
     """ Encoder """
 
-    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int, sentiment_mode: str | None, num_sentiments: int | None, emotion_mode: str | None = None, num_emotions: int | None = None):
+    def __init__(self, config_transformer: ModelTransformerConfig, max_seq_len: int, label_embedding_mode: str | None, num_label_categories: int | None):
         super(Encoder, self).__init__()
 
         n_position = max_seq_len + 1
@@ -55,15 +55,12 @@ class Encoder(nn.Module):
         self.max_seq_len = max_seq_len
         self.d_model = d_model
 
-        self.sentiment_mode = sentiment_mode
-        self.num_sentiments = num_sentiments
+        self.label_embedding_mode = label_embedding_mode
+        self.num_label_categories = num_label_categories
 
-        self.emotion_mode = emotion_mode
-        self.num_emotions = num_emotions
-
-        if sentiment_mode == "input_concat":
-            assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
-            d_word_vec -= num_sentiments
+        if label_embedding_mode == "input_concat":
+            assert num_label_categories is not None, "num_label_categories must be provided for input_concat label_embedding_mode"
+            d_word_vec -= num_label_categories
 
         self.src_word_emb = nn.Embedding(
             n_src_vocab, d_word_vec, padding_idx=Constants.PAD
@@ -86,76 +83,61 @@ class Encoder(nn.Module):
         # self.sentiment_emb_input_from = None
         # self.sentiment_emb_input_to = None
 
-        if sentiment_mode == "input":
-            assert num_sentiments is not None, "num_sentiments must be provided for input sentiment mode"
-            self.sentiment_emb_input = nn.Embedding(
-                num_sentiments,
+        if label_embedding_mode == "input":
+            assert num_label_categories is not None, "num_label_categories must be provided for input label_embedding_mode"
+            self.label_emb_input = nn.Embedding(
+                num_label_categories,
                 d_word_vec,
             )
-            # self.sentiment_emb_input = nn.Embedding(
-            #     num_sentiments,
+            # self.label_emb_input = nn.Embedding(
+            #     num_label_categories,
             #     d_word_vec,
-            #     _weight=torch.zeros(num_sentiments, d_word_vec),
+            #     _weight=torch.zeros(num_label_categories, d_word_vec),
             #     _freeze=True
             # )
-            # print(f"Warning: Initialized sentiment embedding with zeros for {num_sentiments} sentiments.")
-        if sentiment_mode == "input_translate":
-            assert num_sentiments is not None, "num_sentiments must be provided for input_translate sentiment mode"
-            # self.sentiment_emb_input_from = nn.Embedding(
-            #     num_sentiments,
+            # print(f"Warning: Initialized label embedding with zeros for {num_label_categories} labels.")
+        if label_embedding_mode == "input_translate":
+            assert num_label_categories is not None, "num_label_categories must be provided for input_translate label_embedding_mode"
+            # self.label_emb_input_from = nn.Embedding(
+            #     num_label_categories,
             #     d_word_vec,
             # )
-            # self.sentiment_emb_input_to = nn.Embedding(
-            #     num_sentiments,
+            # self.label_emb_input_to = nn.Embedding(
+            #     num_label_categories,
             #     d_word_vec,
             # )
-            num_sentiment_transforms = num_sentiments * num_sentiments
-            self.sentiment_emb_input = nn.Embedding(
-                num_sentiment_transforms,
+            num_label_transforms = num_label_categories * num_label_categories
+            self.label_emb_input = nn.Embedding(
+                num_label_transforms,
                 d_word_vec,
             )
-            # self.sentiment_emb_input.weight.data.normal_(0, 0.1)
-        if sentiment_mode == "input_translate2":
-            assert num_sentiments is not None, "num_sentiments must be provided for input_translate2 sentiment mode"
-            # self.sentiment_emb_input_from = nn.Embedding(
-            #     num_sentiments,
+            # self.label_emb_input.weight.data.normal_(0, 0.1)
+        if label_embedding_mode == "input_translate2":
+            assert num_label_categories is not None, "num_label_categories must be provided for input_translate2 label_embedding_mode"
+            # self.label_emb_input_from = nn.Embedding(
+            #     num_label_categories,
             #     d_word_vec,
             # )
-            # self.sentiment_emb_input_to = nn.Embedding(
-            #     num_sentiments,
+            # self.label_emb_input_to = nn.Embedding(
+            #     num_label_categories,
             #     d_word_vec,
             # )
-            num_sentiment_transforms = num_sentiments * num_sentiments
-            self.sentiment_emb_input = nn.Embedding(
-                num_sentiment_transforms,
+            num_label_transforms = num_label_categories * num_label_categories
+            self.label_emb_input = nn.Embedding(
+                num_label_transforms,
                 d_word_vec,
             )
-            # self.sentiment_emb_input.weight.data.normal_(0, 0.1)
-        if sentiment_mode == "input_concat":
-            assert num_sentiments is not None, "num_sentiments must be provided for input_concat sentiment mode"
-            orthogonal_weights = torch.eye(num_sentiments)
-            self.sentiment_emb_input = nn.Embedding(
-                num_sentiments,
-                num_sentiments,
+            # self.label_emb_input.weight.data.normal_(0, 0.1)
+        if label_embedding_mode == "input_concat":
+            assert num_label_categories is not None, "num_label_categories must be provided for input_concat label_embedding_mode"
+            orthogonal_weights = torch.eye(num_label_categories)
+            self.label_emb_input = nn.Embedding(
+                num_label_categories,
+                num_label_categories,
             )
-            self.sentiment_emb_input.weight.data = orthogonal_weights
+            self.label_emb_input.weight.data = orthogonal_weights
 
-        if emotion_mode == "input":
-            assert num_emotions is not None, "num_emotions must be provided for input emotion mode"
-            self.emotion_emb_input = nn.Embedding(
-                num_emotions,
-                d_word_vec,
-            )
-        if emotion_mode == "input_translate2":
-            assert num_emotions is not None, "num_emotions must be provided for input_translate2 emotion mode"
-            # num_emotion_transforms = num_emotions * num_emotions
-            num_emotion_transforms = num_emotions
-            self.emotion_emb_input = nn.Embedding(
-                num_emotion_transforms,
-                d_word_vec,
-            )
-
-    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, sentiments: torch.Tensor | None = None, sentiments_source: torch.Tensor | None = None, emotions: torch.Tensor | None = None, emotions_source: torch.Tensor | None = None, return_attns=False):
+    def forward(self, src_seq: torch.Tensor, mask: torch.Tensor, labels: torch.Tensor | None = None, labels_source: torch.Tensor | None = None, return_attns=False):
 
         enc_slf_attn_list = []
         batch_size, max_len = src_seq.shape[0], src_seq.shape[1]
@@ -175,84 +157,58 @@ class Encoder(nn.Module):
                 :, :max_len, :
             ].expand(batch_size, -1, -1)
         
-        if self.sentiment_mode == "input":
-            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input sentiment mode"
-            sentiment_emb = self.sentiment_emb_input(
-                sentiments
+        if self.label_embedding_mode == "input":
+            assert self.label_emb_input is not None, "label_emb_input must be provided for input label_embedding_mode"
+            label_emb = self.label_emb_input(
+                labels
             ).unsqueeze(1).expand(batch_size, max_len, -1)
-            enc_output = enc_output + sentiment_emb
-        elif self.sentiment_mode == "input_translate":
-            # assert self.sentiment_emb_input_from is not None and self.sentiment_emb_input_to is not None, "sentiment_emb_input_from and sentiment_emb_input_to must be provided for input_translate sentiment mode"
-            # sentiment_emb_from = self.sentiment_emb_input_from(
-            #     sentiments_source
+            enc_output = enc_output + label_emb
+        elif self.label_embedding_mode == "input_translate":
+            # assert self.label_emb_input_from is not None and self.label_emb_input_to is not None, "label_emb_input_from and label_emb_input_to must be provided for input_translate label_embedding_mode"
+            # label_emb_from = self.label_emb_input_from(
+            #     labels_source
             # ).unsqueeze(1).expand(batch_size, max_len, -1)
-            # sentiment_emb_to = self.sentiment_emb_input_to(
-            #     sentiments
+            # label_emb_to = self.label_emb_input_to(
+            #     labels
             # ).unsqueeze(1).expand(batch_size, max_len, -1)
-            # enc_output = enc_output + (sentiment_emb_to - sentiment_emb_from)
+            # enc_output = enc_output + (label_emb_to - label_emb_from)
 
-            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input_translate sentiment mode"
-            assert sentiments_source is not None, "sentiments_source must be provided for input_translate sentiment mode"
-            assert sentiments is not None, "sentiments must be provided for input_translate sentiment mode"
-            assert self.num_sentiments is not None, "num_sentiments must be provided for input_translate sentiment mode"
+            assert self.label_emb_input is not None, "label_emb_input must be provided for input_translate label_embedding_mode"
+            assert labels_source is not None, "labels_source must be provided for input_translate label_embedding_mode"
+            assert labels is not None, "labels must be provided for input_translate label_embedding_mode"
+            assert self.num_label_categories is not None, "num_label_categories must be provided for input_translate label_embedding_mode"
 
-            sentiment_transform_id = sentiments_source * self.num_sentiments + sentiments
+            label_transform_id = labels_source * self.num_label_categories + labels
 
-            sentiment_emb = self.sentiment_emb_input(
-                sentiment_transform_id
+            label_emb = self.label_emb_input(
+                label_transform_id
             ).unsqueeze(1).expand(batch_size, max_len, -1)
-            enc_output = enc_output + sentiment_emb
+            enc_output = enc_output + label_emb
 
-        elif self.sentiment_mode == "input_translate2":
-            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input_translate2 sentiment mode"
-            assert sentiments_source is not None, "sentiments_source must be provided for input_translate2 sentiment mode"
-            assert sentiments is not None, "sentiments must be provided for input_translate2 sentiment mode"
-            assert self.num_sentiments is not None, "num_sentiments must be provided for input_translate2 sentiment mode"
+        elif self.label_embedding_mode == "input_translate2":
+            assert self.label_emb_input is not None, "label_emb_input must be provided for input_translate2 label_embedding_mode"
+            assert labels_source is not None, "labels_source must be provided for input_translate2 label_embedding_mode"
+            assert labels is not None, "labels must be provided for input_translate2 label_embedding_mode"
+            assert self.num_label_categories is not None, "num_label_categories must be provided for input_translate2 label_embedding_mode"
+
+            label_emb_source = self.label_emb_input(
+                labels_source
+            )[:, :self.label_emb_input.embedding_dim // 2]
+            label_emb_target = self.label_emb_input(
+                labels
+            )[:, self.label_emb_input.embedding_dim // 2:]
+
+            label_emb = torch.cat((label_emb_source, label_emb_target), dim=-1
+                                   ).unsqueeze(1).expand(batch_size, max_len, -1)
+
+            enc_output = enc_output + label_emb
             
-            sentiment_emb_source = self.sentiment_emb_input(
-                sentiments_source
-            )[:, :self.sentiment_emb_input.embedding_dim // 2]
-            sentiment_emb_target = self.sentiment_emb_input(
-                sentiments
-            )[:, self.sentiment_emb_input.embedding_dim // 2:]
-
-            sentiment_emb = torch.cat((sentiment_emb_source, sentiment_emb_target), dim=-1
-                                      ).unsqueeze(1).expand(batch_size, max_len, -1)
-
-            enc_output = enc_output + sentiment_emb
-            
-        elif self.sentiment_mode == "input_concat":
-            assert self.sentiment_emb_input is not None, "sentiment_emb_input must be provided for input_concat sentiment mode"
-            sentiment_emb = self.sentiment_emb_input(
-                sentiments
+        elif self.label_embedding_mode == "input_concat":
+            assert self.label_emb_input is not None, "label_emb_input must be provided for input_concat label_embedding_mode"
+            label_emb = self.label_emb_input(
+                labels
             ).unsqueeze(1).expand(batch_size, max_len, -1)
-            enc_output = torch.cat((enc_output, sentiment_emb), dim=-1)
-
-        if self.emotion_mode == "input":
-            assert self.emotion_emb_input is not None, "emotion_emb_input must be provided for input emotion mode"
-            emotion_emb = self.emotion_emb_input(
-                emotions
-            ).unsqueeze(1).expand(batch_size, max_len, -1)
-            enc_output = enc_output + emotion_emb
-
-        elif self.emotion_mode == "input_translate2":
-            assert self.emotion_emb_input is not None, "emotion_emb_input must be provided for input_translate2 emotion mode"
-            assert emotions_source is not None, "emotions_source must be provided for input_translate2 emotion mode"
-            assert emotions is not None, "emotions must be provided for input_translate2 emotion mode"
-            assert self.num_emotions is not None, "num_emotions must be provided for input_translate2 emotion mode"
-            
-            emotion_emb_source = self.emotion_emb_input(
-                emotions_source
-            )[:, :self.emotion_emb_input.embedding_dim // 2]
-            emotion_emb_target = self.emotion_emb_input(
-                emotions
-            )[:, self.emotion_emb_input.embedding_dim // 2:]
-
-            emotion_emb = torch.cat((emotion_emb_source, emotion_emb_target), dim=-1
-                                      ).unsqueeze(1).expand(batch_size, max_len, -1)
-
-            enc_output = enc_output + emotion_emb
-
+            enc_output = torch.cat((enc_output, label_emb), dim=-1)
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(

@@ -10,7 +10,7 @@ from .dataset.datasetfs import DatasetFS
 from .config import (DatasetConfig, DatasetFeaturePropertiesConfig,
                      ModelConfig, ModelVocoderConfig)
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
-from .dataset.dataset import DatasetSplit, TextOnlyDatasetWithSentiment
+from .dataset.dataset import DatasetSplit, TextOnlyDatasetWithLabel
 from .utils.model import get_model_infer, get_vocoder
 from .utils.tools import synth_samples
 
@@ -130,7 +130,7 @@ def main():
     vocoder = get_vocoder(model_config.vocoder_config, device)
 
     # Get dataset
-    dataset = TextOnlyDatasetWithSentiment(
+    dataset = TextOnlyDatasetWithLabel(
         dataset_config.path_config,
         dataset_config.preprocessing_config,
         data_split

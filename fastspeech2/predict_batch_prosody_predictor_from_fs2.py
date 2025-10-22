@@ -32,10 +32,10 @@ from .config import (
     TrainStepConfig
 )
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
-from .dataset.dataset import DatasetSplit, TextOnlyDatasetWithSentiment
+from .dataset.dataset import DatasetSplit, TextOnlyDatasetWithLabel
 
 torch.serialization.add_safe_globals([
-    np._core.multiarray.scalar, 
+    # np._core.multiarray.scalar,             
     np.dtype, np.dtypes.Float64DType, 
     # DatasetConfig, DatasetPathConfig, 
     # DatasetFeaturePropertiesConfig, 
@@ -110,7 +110,7 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
     model: ProsodyPredictor = get_model_infer(ckpt_path, model_config, dataset_config.feature_properties_config, dataset_feature_stats, device)
 
     # Get dataset
-    dataset = TextOnlyDatasetWithSentiment(
+    dataset = TextOnlyDatasetWithLabel(
         dataset_config.path_config,
         dataset_config.preprocessing_config,
         data_split
@@ -152,7 +152,7 @@ def process(ckpt_path: str, output_path: str, dataset_config_path: str, model_co
                         duration = torch.exp(duration_log).item()  # Convert log duration to actual duration
                         from .text.symbols import symbols
                         phone_alphabet = symbols[phone]
-                        csv_writer.writerow([sample_id, j, phone_alphabet, pitch, energy, duration, sample.sentiment])
+                        csv_writer.writerow([sample_id, j, phone_alphabet, pitch, energy, duration, sample.label])
 
 
 def main():
