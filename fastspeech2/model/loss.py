@@ -341,149 +341,391 @@ class ProsodyPredictorContrastiveLoss(nn.Module):
         self.mse_loss = nn.MSELoss(reduction='none')
         self.mae_loss = nn.L1Loss(reduction='none')
 
+    # def forward(self, inputs: DataBatchTorch, predictions: ProsodyPredictorOutput, contrastive_mask: torch.Tensor) -> ProsodyPredictorContrastiveLossResult:
+    #     assert inputs.pitches is not None, "pitch_targets is None"
+    #     assert inputs.energies is not None, "energy_targets is None"
+    #     assert inputs.durations is not None, "duration_targets is None"
+
+    #     pitch_targets = inputs.pitches
+    #     energy_targets = inputs.energies
+    #     duration_targets = inputs.durations
+
+    #     pitch_predictions = predictions.pitch_predictions
+    #     energy_predictions = predictions.energy_predictions
+    #     log_duration_predictions = predictions.log_duration_predictions
+    #     text_masks = predictions.text_masks
+    #     frame_masks = predictions.frame_masks
+        
+    #     text_masks = ~text_masks
+    #     log_duration_targets = torch.log(duration_targets.float() + 1)
+
+    #     log_duration_targets.requires_grad = False
+    #     pitch_targets.requires_grad = False
+    #     energy_targets.requires_grad = False
+
+    #     # expand mask from [batch_size] to [batch_size, text_len] and then apply masked_select so wa can get a phone-level mask
+    #     contrastive_mask_expanded_text_level = contrastive_mask.unsqueeze(-1).expand(-1, text_masks.shape[1])
+    #     contrastive_mask_expanded_text_level_selected = contrastive_mask_expanded_text_level.masked_select(text_masks)
+    #     # expand mask from [batch_size] to [batch_size, mel_len] and then apply masked_select so we can get a frame-level mask
+    #     if frame_masks is not None:
+    #         contrastive_mask_expanded_frame_level = contrastive_mask.unsqueeze(-1).expand(-1, frame_masks.shape[1])
+    #         contrastive_mask_expanded_frame_level_selected = contrastive_mask_expanded_frame_level.masked_select(~frame_masks)
+    #     else:
+    #         contrastive_mask_expanded_frame_level_selected = None
+
+    #     if self.pitch_feature_level == "phoneme_level":
+    #         pitch_contrastive_mask = contrastive_mask_expanded_text_level_selected
+    #         pitch_predictions = pitch_predictions.masked_select(text_masks)
+    #         pitch_targets = pitch_targets.masked_select(text_masks)
+    #     elif self.pitch_feature_level == "frame_level":
+    #         assert frame_masks is not None, "frame_masks is None for frame level pitch feature"
+    #         pitch_contrastive_mask = contrastive_mask_expanded_frame_level_selected
+    #         pitch_predictions = pitch_predictions.masked_select(~frame_masks)
+    #         pitch_targets = pitch_targets.masked_select(~frame_masks)
+    #     else:
+    #         raise ValueError(f"Invalid pitch feature level: {self.pitch_feature_level}")
+
+    #     if self.energy_feature_level == "phoneme_level":
+    #         energy_contrastive_mask = contrastive_mask_expanded_text_level_selected
+    #         energy_predictions = energy_predictions.masked_select(text_masks)
+    #         energy_targets = energy_targets.masked_select(text_masks)
+    #     elif self.energy_feature_level == "frame_level":
+    #         assert frame_masks is not None, "frame_masks is None for frame level energy feature"
+    #         energy_contrastive_mask = contrastive_mask_expanded_frame_level_selected
+    #         energy_predictions = energy_predictions.masked_select(~frame_masks)
+    #         energy_targets = energy_targets.masked_select(~frame_masks)
+    #     else:
+    #         raise ValueError(f"Invalid energy feature level: {self.energy_feature_level}")
+
+    #     duration_contrastive_mask = contrastive_mask_expanded_text_level_selected
+    #     log_duration_predictions = log_duration_predictions.masked_select(text_masks)
+    #     log_duration_targets = log_duration_targets.masked_select(text_masks)
+
+    #     pitch_loss_raw = self.mse_loss(pitch_predictions, pitch_targets)
+    #     energy_loss_raw = self.mse_loss(energy_predictions, energy_targets)
+    #     duration_loss_raw = self.mse_loss(log_duration_predictions, log_duration_targets)
+
+    #     # mask 0: std_loss, mask -1: negative contrastive loss, mask 1: positive contrastive loss
+    #     pitch_loss_raw_std = pitch_loss_raw[pitch_contrastive_mask == 0]
+    #     energy_loss_raw_std = energy_loss_raw[energy_contrastive_mask == 0]
+    #     duration_loss_raw_std = duration_loss_raw[duration_contrastive_mask == 0]
+    #     pitch_loss_std = torch.mean(pitch_loss_raw_std, dim=0)
+    #     energy_loss_std = torch.mean(energy_loss_raw_std, dim=0)
+    #     duration_loss_std = torch.mean(duration_loss_raw_std, dim=0)
+
+    #     pitch_loss_raw_neg = pitch_loss_raw[pitch_contrastive_mask == -1]
+    #     energy_loss_raw_neg = energy_loss_raw[energy_contrastive_mask == -1]
+    #     duration_loss_raw_neg = duration_loss_raw[duration_contrastive_mask == -1]
+    #     pitch_loss_neg = torch.mean(pitch_loss_raw_neg, dim=0)
+    #     energy_loss_neg = torch.mean(energy_loss_raw_neg, dim=0)
+    #     duration_loss_neg = torch.mean(duration_loss_raw_neg, dim=0)
+
+    #     pitch_loss_raw_pos = pitch_loss_raw[pitch_contrastive_mask == 1]
+    #     energy_loss_raw_pos = energy_loss_raw[energy_contrastive_mask == 1]
+    #     duration_loss_raw_pos = duration_loss_raw[duration_contrastive_mask == 1]
+    #     pitch_loss_pos = torch.mean(pitch_loss_raw_pos, dim=0)
+    #     energy_loss_pos = torch.mean(energy_loss_raw_pos, dim=0)
+    #     duration_loss_pos = torch.mean(duration_loss_raw_pos, dim=0)
+
+    #     pitch_loss_std = torch.nan_to_num(pitch_loss_std, nan=0.0)
+    #     energy_loss_std = torch.nan_to_num(energy_loss_std, nan=0.0)
+    #     duration_loss_std = torch.nan_to_num(duration_loss_std, nan=0.0)
+
+    #     pitch_loss_neg = torch.nan_to_num(pitch_loss_neg, nan=0.0)
+    #     energy_loss_neg = torch.nan_to_num(energy_loss_neg, nan=0.0)
+    #     duration_loss_neg = torch.nan_to_num(duration_loss_neg, nan=0.0)
+
+    #     pitch_loss_pos = torch.nan_to_num(pitch_loss_pos, nan=0.0)
+    #     energy_loss_pos = torch.nan_to_num(energy_loss_pos, nan=0.0)
+    #     duration_loss_pos = torch.nan_to_num(duration_loss_pos, nan=0.0)
+
+    #     # Contrastive 1
+    #     # pitch_loss = pitch_loss_std + -self.lambda_neg * pitch_loss_neg + self.lambda_pos * pitch_loss_pos
+    #     # energy_loss = energy_loss_std + -self.lambda_neg * energy_loss_neg + self.lambda_pos * energy_loss_pos
+    #     # duration_loss = duration_loss_std + -self.lambda_neg * duration_loss_neg + self.lambda_pos * duration_loss_pos
+
+    #     # Contrastive 2
+    #     # pitch_loss = pitch_loss_std + (self.lambda_pos * pitch_loss_pos) / (self.lambda_neg * pitch_loss_neg)
+    #     # energy_loss = energy_loss_std + (self.lambda_pos * energy_loss_pos) / (self.lambda_neg * energy_loss_neg)
+    #     # duration_loss = duration_loss_std + (self.lambda_pos * duration_loss_pos) / (self.lambda_neg * duration_loss_neg)
+
+    #     # Contrastive 3
+    #     # pitch_loss = pitch_loss_std + self.lambda_pos * torch.log(torch.exp(pitch_loss_pos) / torch.exp(pitch_loss_neg))
+    #     # energy_loss = energy_loss_std + self.lambda_pos * torch.log(torch.exp(energy_loss_pos) / torch.exp(energy_loss_neg))
+    #     # duration_loss = duration_loss_std + self.lambda_pos * torch.log(torch.exp(duration_loss_pos) / torch.exp(duration_loss_neg))
+
+    #     # Contrastive 4
+    #     # pitch_loss = torch.log(torch.exp(pitch_loss_std) / torch.exp(pitch_loss_neg))
+    #     # energy_loss = torch.log(torch.exp(energy_loss_std) / torch.exp(energy_loss_neg))
+    #     # duration_loss = torch.log(torch.exp(duration_loss_std) / torch.exp(duration_loss_neg))
+
+    #     # Contrastive 5
+    #     pitch_loss = pitch_loss_std + self.lambda_pos * -torch.log(torch.exp(-pitch_loss_pos) / (torch.exp(-pitch_loss_pos) + torch.exp(-pitch_loss_neg)))
+    #     energy_loss = energy_loss_std + self.lambda_pos * -torch.log(torch.exp(-energy_loss_pos) / (torch.exp(-energy_loss_pos) + torch.exp(-energy_loss_neg)))
+    #     duration_loss = duration_loss_std + self.lambda_pos * -torch.log(torch.exp(-duration_loss_pos) / (torch.exp(-duration_loss_pos) + torch.exp(-duration_loss_neg)))
+
+
+
+    #     total_loss = (
+    #         duration_loss + pitch_loss + energy_loss
+    #     )
+
+    #     result = ProsodyPredictorContrastiveLossResult(
+    #         pitch_loss_std=pitch_loss_std,
+    #         energy_loss_std=energy_loss_std,
+    #         duration_loss_std=duration_loss_std,
+    #         pitch_loss_neg=pitch_loss_neg,
+    #         energy_loss_neg=energy_loss_neg,
+    #         duration_loss_neg=duration_loss_neg,
+    #         pitch_loss_pos=pitch_loss_pos,
+    #         energy_loss_pos=energy_loss_pos,
+    #         duration_loss_pos=duration_loss_pos,
+    #         pitch_loss=pitch_loss,
+    #         energy_loss=energy_loss,
+    #         duration_loss=duration_loss,
+    #         total_loss=total_loss,
+    #     )
+
+    #     return result
+
+    def mp_infonce_stable(
+        self,
+        d_pos: torch.Tensor,  # shape [B, P]  distance of positive samples, lower is better
+        d_neg: torch.Tensor,  # shape [B, N]  distance of negative samples (wrong label), higher is better
+        tau_pos=1.0,
+        tau_neg=1.0,
+        neg_weight=0.5,   # λ∈(0,1] to soften the negative samples
+    ):
+        # logits = - distance / tau
+        z_pos = -d_pos / tau_pos                      # [B, P]
+        z_neg = -d_neg / tau_neg                      # [B, N]
+
+        # logsumexp： magnitude stable computation of log(sum(exp(x)))
+        lse_pos = torch.logsumexp(z_pos, dim=-1)       # [B]
+        lse_neg = torch.logsumexp(z_neg, dim=-1)       # [B]
+
+        # multiple with λ over the sum: log(λ * sum exp(z_neg)) = lse_neg + log(λ)
+        lse_neg = lse_neg + torch.log(torch.tensor(neg_weight, device=d_pos.device))
+
+        # -log( A / (A + B) ) = log(1 + B/A) = softplus( log B - log A )
+        import torch.nn.functional as F
+        loss = F.softplus(lse_neg - lse_pos)          # [B]
+
+        return loss
+
+
+
     def forward(self, inputs: DataBatchTorch, predictions: ProsodyPredictorOutput, contrastive_mask: torch.Tensor) -> ProsodyPredictorContrastiveLossResult:
         assert inputs.pitches is not None, "pitch_targets is None"
         assert inputs.energies is not None, "energy_targets is None"
         assert inputs.durations is not None, "duration_targets is None"
 
-        pitch_targets = inputs.pitches
-        energy_targets = inputs.energies
-        duration_targets = inputs.durations
+        pitch_targets = inputs.pitches          # [B * (N + P + 1), L]
+        energy_targets = inputs.energies        # [B * (N + P + 1), L]
+        duration_targets = inputs.durations     # [B * (N + P + 1), L]
 
-        pitch_predictions = predictions.pitch_predictions
-        energy_predictions = predictions.energy_predictions
-        log_duration_predictions = predictions.log_duration_predictions
-        text_masks = predictions.text_masks
-        frame_masks = predictions.frame_masks
+        pitch_predictions = predictions.pitch_predictions                   # [B * (N + P + 1), L]
+        energy_predictions = predictions.energy_predictions                 # [B * (N + P + 1), L]
+        log_duration_predictions = predictions.log_duration_predictions     # [B * (N + P + 1), L]
+        text_masks = ~predictions.text_masks                                                        # [B * (N + P + 1), L]
+        frame_masks = ~predictions.frame_masks if predictions.frame_masks is not None else None     # [B * (N + P + 1), F]
         
-        text_masks = ~text_masks
-        log_duration_targets = torch.log(duration_targets.float() + 1)
+        log_duration_targets = torch.log(duration_targets.float() + 1)                      # [B * (N + P + 1), L]
 
         log_duration_targets.requires_grad = False
         pitch_targets.requires_grad = False
         energy_targets.requires_grad = False
 
-        # expand mask from [batch_size] to [batch_size, text_len] and then apply masked_select so wa can get a phone-level mask
-        contrastive_mask_expanded_text_level = contrastive_mask.unsqueeze(-1).expand(-1, text_masks.shape[1])
-        contrastive_mask_expanded_text_level_selected = contrastive_mask_expanded_text_level.masked_select(text_masks)
-        # expand mask from [batch_size] to [batch_size, mel_len] and then apply masked_select so we can get a frame-level mask
-        if frame_masks is not None:
-            contrastive_mask_expanded_frame_level = contrastive_mask.unsqueeze(-1).expand(-1, frame_masks.shape[1])
-            contrastive_mask_expanded_frame_level_selected = contrastive_mask_expanded_frame_level.masked_select(~frame_masks)
-        else:
-            contrastive_mask_expanded_frame_level_selected = None
 
+        # compute raw losses
+        pitch_loss_raw = self.mse_loss(pitch_predictions, pitch_targets)                    # [B * (N + P + 1), L]
+        energy_loss_raw = self.mse_loss(energy_predictions, energy_targets)                 # [B * (N + P + 1), L]
+        duration_loss_raw = self.mse_loss(log_duration_predictions, log_duration_targets)   # [B * (N + P + 1), L]
+
+        # mask loss lengths
         if self.pitch_feature_level == "phoneme_level":
-            pitch_contrastive_mask = contrastive_mask_expanded_text_level_selected
-            pitch_predictions = pitch_predictions.masked_select(text_masks)
-            pitch_targets = pitch_targets.masked_select(text_masks)
+            pitch_loss_raw_masked = pitch_loss_raw * text_masks                         # [B * (N + P + 1), L]
         elif self.pitch_feature_level == "frame_level":
             assert frame_masks is not None, "frame_masks is None for frame level pitch feature"
-            pitch_contrastive_mask = contrastive_mask_expanded_frame_level_selected
-            pitch_predictions = pitch_predictions.masked_select(~frame_masks)
-            pitch_targets = pitch_targets.masked_select(~frame_masks)
+            pitch_loss_raw_masked = pitch_loss_raw * frame_masks
         else:
             raise ValueError(f"Invalid pitch feature level: {self.pitch_feature_level}")
-
+        
         if self.energy_feature_level == "phoneme_level":
-            energy_contrastive_mask = contrastive_mask_expanded_text_level_selected
-            energy_predictions = energy_predictions.masked_select(text_masks)
-            energy_targets = energy_targets.masked_select(text_masks)
+            energy_loss_raw_masked = energy_loss_raw * text_masks                       # [B * (N + P + 1), L]
         elif self.energy_feature_level == "frame_level":
             assert frame_masks is not None, "frame_masks is None for frame level energy feature"
-            energy_contrastive_mask = contrastive_mask_expanded_frame_level_selected
-            energy_predictions = energy_predictions.masked_select(~frame_masks)
-            energy_targets = energy_targets.masked_select(~frame_masks)
+            energy_loss_raw_masked = energy_loss_raw * frame_masks
         else:
             raise ValueError(f"Invalid energy feature level: {self.energy_feature_level}")
 
-        duration_contrastive_mask = contrastive_mask_expanded_text_level_selected
-        log_duration_predictions = log_duration_predictions.masked_select(text_masks)
-        log_duration_targets = log_duration_targets.masked_select(text_masks)
-
-        pitch_loss_raw = self.mse_loss(pitch_predictions, pitch_targets)
-        energy_loss_raw = self.mse_loss(energy_predictions, energy_targets)
-        duration_loss_raw = self.mse_loss(log_duration_predictions, log_duration_targets)
-
-        # mask 0: std_loss, mask -1: negative contrastive loss, mask 1: positive contrastive loss
-        pitch_loss_raw_std = pitch_loss_raw[pitch_contrastive_mask == 0]
-        energy_loss_raw_std = energy_loss_raw[energy_contrastive_mask == 0]
-        duration_loss_raw_std = duration_loss_raw[duration_contrastive_mask == 0]
-        pitch_loss_std = torch.mean(pitch_loss_raw_std, dim=0)
-        energy_loss_std = torch.mean(energy_loss_raw_std, dim=0)
-        duration_loss_std = torch.mean(duration_loss_raw_std, dim=0)
-
-        pitch_loss_raw_neg = pitch_loss_raw[pitch_contrastive_mask == -1]
-        energy_loss_raw_neg = energy_loss_raw[energy_contrastive_mask == -1]
-        duration_loss_raw_neg = duration_loss_raw[duration_contrastive_mask == -1]
-        pitch_loss_neg = torch.mean(pitch_loss_raw_neg, dim=0)
-        energy_loss_neg = torch.mean(energy_loss_raw_neg, dim=0)
-        duration_loss_neg = torch.mean(duration_loss_raw_neg, dim=0)
-
-        pitch_loss_raw_pos = pitch_loss_raw[pitch_contrastive_mask == 1]
-        energy_loss_raw_pos = energy_loss_raw[energy_contrastive_mask == 1]
-        duration_loss_raw_pos = duration_loss_raw[duration_contrastive_mask == 1]
-        pitch_loss_pos = torch.mean(pitch_loss_raw_pos, dim=0)
-        energy_loss_pos = torch.mean(energy_loss_raw_pos, dim=0)
-        duration_loss_pos = torch.mean(duration_loss_raw_pos, dim=0)
-
-        pitch_loss_std = torch.nan_to_num(pitch_loss_std, nan=0.0)
-        energy_loss_std = torch.nan_to_num(energy_loss_std, nan=0.0)
-        duration_loss_std = torch.nan_to_num(duration_loss_std, nan=0.0)
-
-        pitch_loss_neg = torch.nan_to_num(pitch_loss_neg, nan=0.0)
-        energy_loss_neg = torch.nan_to_num(energy_loss_neg, nan=0.0)
-        duration_loss_neg = torch.nan_to_num(duration_loss_neg, nan=0.0)
-
-        pitch_loss_pos = torch.nan_to_num(pitch_loss_pos, nan=0.0)
-        energy_loss_pos = torch.nan_to_num(energy_loss_pos, nan=0.0)
-        duration_loss_pos = torch.nan_to_num(duration_loss_pos, nan=0.0)
-
-        # Contrastive 1
-        # pitch_loss = pitch_loss_std + -self.lambda_neg * pitch_loss_neg + self.lambda_pos * pitch_loss_pos
-        # energy_loss = energy_loss_std + -self.lambda_neg * energy_loss_neg + self.lambda_pos * energy_loss_pos
-        # duration_loss = duration_loss_std + -self.lambda_neg * duration_loss_neg + self.lambda_pos * duration_loss_pos
-
-        # Contrastive 2
-        # pitch_loss = pitch_loss_std + (self.lambda_pos * pitch_loss_pos) / (self.lambda_neg * pitch_loss_neg)
-        # energy_loss = energy_loss_std + (self.lambda_pos * energy_loss_pos) / (self.lambda_neg * energy_loss_neg)
-        # duration_loss = duration_loss_std + (self.lambda_pos * duration_loss_pos) / (self.lambda_neg * duration_loss_neg)
-
-        # Contrastive 3
-        # pitch_loss = pitch_loss_std + self.lambda_pos * torch.log(torch.exp(pitch_loss_pos) / torch.exp(pitch_loss_neg))
-        # energy_loss = energy_loss_std + self.lambda_pos * torch.log(torch.exp(energy_loss_pos) / torch.exp(energy_loss_neg))
-        # duration_loss = duration_loss_std + self.lambda_pos * torch.log(torch.exp(duration_loss_pos) / torch.exp(duration_loss_neg))
-
-        # Contrastive 4
-        # pitch_loss = torch.log(torch.exp(pitch_loss_std) / torch.exp(pitch_loss_neg))
-        # energy_loss = torch.log(torch.exp(energy_loss_std) / torch.exp(energy_loss_neg))
-        # duration_loss = torch.log(torch.exp(duration_loss_std) / torch.exp(duration_loss_neg))
-
-        # Contrastive 5
-        pitch_loss = pitch_loss_std + self.lambda_pos * -torch.log(torch.exp(-pitch_loss_pos) / (torch.exp(-pitch_loss_pos) + torch.exp(-pitch_loss_neg)))
-        energy_loss = energy_loss_std + self.lambda_pos * -torch.log(torch.exp(-energy_loss_pos) / (torch.exp(-energy_loss_pos) + torch.exp(-energy_loss_neg)))
-        duration_loss = duration_loss_std + self.lambda_pos * -torch.log(torch.exp(-duration_loss_pos) / (torch.exp(-duration_loss_pos) + torch.exp(-duration_loss_neg)))
+        duration_loss_raw_masked = duration_loss_raw * text_masks                       # [B * (N + P + 1), L]
 
 
+        # sample-wise mean
+        pitch_loss_raw_sample_mean = torch.mean(pitch_loss_raw_masked, dim=-1)          # [B * (N + P + 1)]
+        energy_loss_raw_sample_mean = torch.mean(energy_loss_raw_masked, dim=-1)        # [B * (N + P + 1)]
+        duration_loss_raw_sample_mean = torch.mean(duration_loss_raw_masked, dim=-1)    # [B * (N + P + 1)]
 
-        total_loss = (
-            duration_loss + pitch_loss + energy_loss
+
+        # contrastive mask
+
+        pitch_loss_neg = pitch_loss_raw_sample_mean[contrastive_mask == -1]         # [B * N]
+        energy_loss_neg = energy_loss_raw_sample_mean[contrastive_mask == -1]       # [B * N]
+        duration_loss_neg = duration_loss_raw_sample_mean[contrastive_mask == -1]   # [B * N]
+
+        pitch_loss_pos = pitch_loss_raw_sample_mean[contrastive_mask == 1]          # [B * P]
+        energy_loss_pos = energy_loss_raw_sample_mean[contrastive_mask == 1]        # [B * P]
+        duration_loss_pos = duration_loss_raw_sample_mean[contrastive_mask == 1]    # [B * P]
+
+        pitch_loss_std = pitch_loss_raw_sample_mean[contrastive_mask == 0]          # [B * 1]
+        energy_loss_std = energy_loss_raw_sample_mean[contrastive_mask == 0]        # [B * 1]
+        duration_loss_std = duration_loss_raw_sample_mean[contrastive_mask == 0]    # [B * 1]
+
+        # pos and neg alignment
+        assert inputs.sort == False, "ProsodyPredictorContrastiveLoss requires inputs.sort == False for correct negative sampling"
+
+        neg_ratio = pitch_loss_neg.shape[0] // pitch_loss_std.shape[0]      # N
+        pitch_loss_neg_aligned = pitch_loss_neg.view(-1, neg_ratio)         # [B, N]
+        energy_loss_neg_aligned = energy_loss_neg.view(-1, neg_ratio)       # [B, N]    
+        duration_loss_neg_aligned = duration_loss_neg.view(-1, neg_ratio)   # [B, N]
+
+        pos_ratio = pitch_loss_pos.shape[0] // pitch_loss_std.shape[0]      # P
+        pitch_loss_pos_aligned = pitch_loss_pos.view(-1, pos_ratio)         # [B, P]
+        energy_loss_pos_aligned = energy_loss_pos.view(-1, pos_ratio)       # [B, P]
+        duration_loss_pos_aligned = duration_loss_pos.view(-1, pos_ratio)   # [B, P]
+
+
+        # contrastive loss
+
+        # pitch_loss = (
+        #     pitch_loss_std + 
+        #     self.lambda_pos * -torch.log(
+        #         torch.exp(-pitch_loss_pos_aligned).sum(dim=1) / 
+        #         (
+        #             torch.exp(-pitch_loss_pos_aligned).sum(dim=1) + 
+        #             torch.exp(-pitch_loss_neg_aligned * self.lambda_neg).sum(dim=1)
+        #         )
+        #     )
+        # )
+        # energy_loss = (
+        #     energy_loss_std + 
+        #     self.lambda_pos * -torch.log(
+        #         torch.exp(-energy_loss_pos_aligned).sum(dim=1) / 
+        #         (
+        #             torch.exp(-energy_loss_pos_aligned).sum(dim=1) + 
+        #             torch.exp(-energy_loss_neg_aligned * self.lambda_neg).sum(dim=1)
+        #         )
+        #     )
+        # )
+        # duration_loss = (
+        #     duration_loss_std + 
+        #     self.lambda_pos * -torch.log(
+        #         torch.exp(-duration_loss_pos_aligned).sum(dim=1) / 
+        #         (
+        #             torch.exp(-duration_loss_pos_aligned).sum(dim=1) + 
+        #             torch.exp(-duration_loss_neg_aligned * self.lambda_neg).sum(dim=1)
+        #         )
+        #     )
+        # )
+
+        
+
+        # VARIANT 5: contrastive loss with mean over pos and neg samples
+        # L_contrastive = L_std + λ_pos * \log( exp(-\mean(d_pos)) / (exp(-\mean(d_pos)) + λ_neg * exp(-\mean(d_neg))) )
+        # pitch_loss = pitch_loss_std + self.lambda_pos * self.mp_infonce_stable(
+        #     d_pos=pitch_loss_pos_aligned.mean(dim=1),   # [B]
+        #     d_neg=pitch_loss_neg_aligned.mean(dim=1),   # [B]
+        #     neg_weight=self.lambda_neg
+        # )   # [B]
+        # energy_loss = energy_loss_std + self.lambda_pos * self.mp_infonce_stable(
+        #     d_pos=energy_loss_pos_aligned.mean(dim=1),   # [B]
+        #     d_neg=energy_loss_neg_aligned.mean(dim=1),   # [B]
+        #     neg_weight=self.lambda_neg
+        # )   # [B]
+        # duration_loss = duration_loss_std + self.lambda_pos * self.mp_infonce_stable(
+        #     d_pos=duration_loss_pos_aligned.mean(dim=1),   # [B]
+        #     d_neg=duration_loss_neg_aligned.mean(dim=1),   # [B]
+        #     neg_weight=self.lambda_neg
+        # )   # [B]
+
+
+        # VARIANT 6: contrastive loss with all individual pos and neg samples
+        # L_contrastive = L_std + λ_pos * \log( \sum exp(-d_pos) / (\sum exp(-d_pos) + λ_neg * \sum exp(-d_neg)) )
+        # pitch_loss = pitch_loss_std + self.lambda_pos * self.mp_infonce_stable(
+        #     d_pos=pitch_loss_pos_aligned,   # [B, P]
+        #     d_neg=pitch_loss_neg_aligned,   # [B, N]
+        #     neg_weight=self.lambda_neg
+        # )   # [B]
+        # energy_loss = energy_loss_std + self.lambda_pos * self.mp_infonce_stable(
+        #     d_pos=energy_loss_pos_aligned,   # [B, P]
+        #     d_neg=energy_loss_neg_aligned,   # [B, N]
+        #     neg_weight=self.lambda_neg
+        # )   # [B]
+        # duration_loss = duration_loss_std + self.lambda_pos * self.mp_infonce_stable(
+        #     d_pos=duration_loss_pos_aligned,   # [B, P]
+        #     d_neg=duration_loss_neg_aligned,   # [B, N]
+        #     neg_weight=self.lambda_neg
+        # )   # [B]
+
+
+        # VARIANT 7: contrastive loss with gt as the pos and all neg samples
+        # L_contrastive = \log( exp(-d_std) / (exp(-d_std) + λ_neg * \sum exp(-d_neg)) )
+        pitch_loss = pitch_loss_std + self.lambda_pos * self.mp_infonce_stable(
+            d_pos=pitch_loss_std,   # [B, 1]
+            d_neg=pitch_loss_neg_aligned,   # [B, N]
+            neg_weight=self.lambda_neg
+        )   # [B]
+        energy_loss = energy_loss_std + self.lambda_pos * self.mp_infonce_stable(
+            d_pos=energy_loss_std,   # [B, 1]
+            d_neg=energy_loss_neg_aligned,   # [B, N]
+            neg_weight=self.lambda_neg
+        )   # [B]
+        duration_loss = duration_loss_std + self.lambda_pos * self.mp_infonce_stable(
+            d_pos=duration_loss_std,   # [B, 1]
+            d_neg=duration_loss_neg_aligned,   # [B, N]
+            neg_weight=self.lambda_neg
+        )   # [B]
+
+
+
+        # clean NaN values
+        pitch_loss_std = torch.nan_to_num(pitch_loss_std, nan=0.0)          # [B]
+        energy_loss_std = torch.nan_to_num(energy_loss_std, nan=0.0)        # [B]
+        duration_loss_std = torch.nan_to_num(duration_loss_std, nan=0.0)    # [B]
+
+        pitch_loss_neg = torch.nan_to_num(pitch_loss_neg, nan=0.0)          # [B * N]
+        energy_loss_neg = torch.nan_to_num(energy_loss_neg, nan=0.0)        # [B * N]
+        duration_loss_neg = torch.nan_to_num(duration_loss_neg, nan=0.0)    # [B * N]
+
+        pitch_loss_pos = torch.nan_to_num(pitch_loss_pos, nan=0.0)          # [B * P]
+        energy_loss_pos = torch.nan_to_num(energy_loss_pos, nan=0.0)        # [B * P]
+        duration_loss_pos = torch.nan_to_num(duration_loss_pos, nan=0.0)    # [B * P]
+
+
+        # aggregate losses
+        pitch_loss_batch = torch.mean(pitch_loss, dim=0)
+        energy_loss_batch = torch.mean(energy_loss, dim=0)
+        duration_loss_batch = torch.mean(duration_loss, dim=0)
+
+        total_loss_batch = (
+            duration_loss_batch + pitch_loss_batch + energy_loss_batch
         )
 
         result = ProsodyPredictorContrastiveLossResult(
-            pitch_loss_std=pitch_loss_std,
-            energy_loss_std=energy_loss_std,
-            duration_loss_std=duration_loss_std,
-            pitch_loss_neg=pitch_loss_neg,
-            energy_loss_neg=energy_loss_neg,
-            duration_loss_neg=duration_loss_neg,
-            pitch_loss_pos=pitch_loss_pos,
-            energy_loss_pos=energy_loss_pos,
-            duration_loss_pos=duration_loss_pos,
-            pitch_loss=pitch_loss,
-            energy_loss=energy_loss,
-            duration_loss=duration_loss,
-            total_loss=total_loss,
+            pitch_loss_std=pitch_loss_std.mean(dim=0),
+            energy_loss_std=energy_loss_std.mean(dim=0),
+            duration_loss_std=duration_loss_std.mean(dim=0),
+            pitch_loss_neg=pitch_loss_neg.mean(dim=0),
+            energy_loss_neg=energy_loss_neg.mean(dim=0),
+            duration_loss_neg=duration_loss_neg.mean(dim=0),
+            pitch_loss_pos=pitch_loss_pos.mean(dim=0),
+            energy_loss_pos=energy_loss_pos.mean(dim=0),
+            duration_loss_pos=duration_loss_pos.mean(dim=0),
+            pitch_loss=pitch_loss_batch,
+            energy_loss=energy_loss_batch,
+            duration_loss=duration_loss_batch,
+            total_loss=total_loss_batch,
         )
 
         return result

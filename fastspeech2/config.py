@@ -32,7 +32,16 @@ class DatasetPathConfig:
             f"    stats_file={self.stats_file}, \n"
             f"    label_file={self.label_file}"
         )
-
+    
+    def __eq__(self, other):
+        if not isinstance(other, DatasetPathConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+    
+        
+    def __hash__(self):
+        return hash(self.__repr__())
+        
     def to_dict(self):
         return {
             "base_dir": self.base_dir,
@@ -71,6 +80,14 @@ class DatasetPreprocessingConfig:
             f"    lexicon_path={self.lexicon_path}, \n"
             f"    text_cleaners={self.text_cleaners})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, DatasetPreprocessingConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def to_dict(self):
         return {
@@ -116,6 +133,14 @@ class DatasetFeaturePropertiesConfig:
             f"    num_label_categories={self.num_label_categories})"
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, DatasetFeaturePropertiesConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "pitch_feature_level": self.pitch_feature_level,
@@ -158,6 +183,14 @@ class DatasetConfig:
             f"  properties={self.feature_properties_config}, \n"
             f"  preprocessing={self.preprocessing_config})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, DatasetConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def to_dict(self):
         return {
@@ -227,6 +260,14 @@ class ModelTransformerConfig:
             f"    decoder_dropout={self.decoder_dropout})"
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, ModelTransformerConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "encoder_layer": self.encoder_layer,
@@ -274,7 +315,15 @@ class ModelVariancePredictorConfig:
             f"    kernel_size={self.kernel_size}, \n"
             f"    dropout={self.dropout})"
         )
-    
+
+    def __eq__(self, other):
+        if not isinstance(other, ModelVariancePredictorConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "filter_size": self.filter_size,
@@ -308,7 +357,15 @@ class ModelVarianceEmbeddingConfig:
             f"    energy_quantization={self.energy_quantization}, \n"
             f"    n_bins={self.n_bins})"
         )
-    
+
+    def __eq__(self, other):
+        if not isinstance(other, ModelVarianceEmbeddingConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "pitch_quantization": self.pitch_quantization,
@@ -339,7 +396,15 @@ class ModelVocoderConfig:
             f"    model={self.model}, \n"
             f"    speaker={self.speaker})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, ModelVocoderConfig):
+            return False
+        return self.__repr__() == other.__repr__()
     
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "model": self.model,
@@ -371,7 +436,15 @@ class ModelGlobalConfig:
             f"    label_embedding_mode={self.label_embedding_mode}, \n"
             f"    max_seq_len={self.max_seq_len})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, ModelGlobalConfig):
+            return False
+        return self.__repr__() == other.__repr__()
     
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "multi_speaker": self.multi_speaker,
@@ -412,7 +485,15 @@ class ModelConfig:
             f"  vocoder_config={self.vocoder_config}, \n"
             f"  global_config={self.global_config})"
         )
-    
+
+    def __eq__(self, other):
+        if not isinstance(other, ModelConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "transformer_config": self.transformer_config.to_dict(),
@@ -437,6 +518,7 @@ class ModelConfig:
         with open(yaml_file, 'r') as file:
             config = yaml.safe_load(file)
         return cls.from_dict(config)
+
 class TrainOutputConfig:
     def __init__(
         self,
@@ -452,6 +534,14 @@ class TrainOutputConfig:
             f"    log_dir_name={self.log_dir_name}, \n"
             f"    ckpt_dir_name={self.ckpt_dir_name})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, TrainOutputConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+    
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def to_dict(self):
         return {
@@ -493,6 +583,14 @@ class TrainStepConfig:
             f"    save_step={self.save_step}, \n"
             f"    batch_size={self.batch_size})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, TrainStepConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def to_dict(self):
         return {
@@ -552,7 +650,15 @@ class TrainOptimizerConfig:
             f"    anneal_steps={self.anneal_steps}, \n"
             f"    anneal_rate={self.anneal_rate})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, TrainOptimizerConfig):
+            return False
+        return self.__repr__() == other.__repr__()
     
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "init_lr": self.init_lr,
@@ -594,6 +700,15 @@ class LossConfig:
             f"    lambda_neg={self.lambda_neg}, \n"
             f"    lambda_pos={self.lambda_pos})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, LossConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+    
+    def __hash__(self):
+        return hash(self.__repr__())
+
     def to_dict(self):
         return {
             "lambda_neg": self.lambda_neg,
@@ -628,6 +743,14 @@ class TrainConfig:
             f"  step_config={self.step_config}, \n"
             f"  loss_config={self.loss_config})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, TrainConfig):
+            return False
+        return self.__repr__() == other.__repr__()
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def to_dict(self):
         return {

@@ -8,6 +8,7 @@ import tqdm
 
 class DatasetFS:
     def __init__(self, base_path):
+        tqdm.tqdm.write(f"Opening dataset tarball: {base_path}")
         self.base_path = Path(base_path)
         self.tar = tarfile.open(self.base_path, "r")
 
@@ -22,16 +23,16 @@ class DatasetFS:
             last_modified = index["last_modified"]
 
             if last_modified == os.path.getmtime(self.base_path):
-                print("Index file is up to date, loading from index.")
+                tqdm.tqdm.write("Index file is up to date, loading from index.")
                 self.all_files = index["all_files"]
                 self.all_folders = index["all_folders"]
                 self.file_map = index["file_map"]
-                print(f"{len(self.all_files)} files and {len(self.all_folders)} folders loaded from index.")
+                tqdm.tqdm.write(f"{len(self.all_files)} files and {len(self.all_folders)} folders loaded from index.")
                 return
-            
-            print(f"Index file is outdated, re-indexing dataset tarball: {self.base_path}")
+
+            tqdm.tqdm.write(f"Index file is outdated, re-indexing dataset tarball: {self.base_path}")
         else:
-            print(f"Index file not found: {index_file}, generating new index for dataset tarball: {self.base_path}")
+            tqdm.tqdm.write(f"Index file not found: {index_file}, generating new index for dataset tarball: {self.base_path}")
 
         for entry in tqdm.tqdm(self.tar, desc="Indexing dataset tarball", dynamic_ncols=True):
             if entry.isfile():
@@ -40,7 +41,7 @@ class DatasetFS:
             elif entry.isdir():
                 self.all_folders.append(entry)
 
-        print(f"Indexed {len(self.all_files)} files and {len(self.all_folders)} folders in dataset tarball: {self.base_path}")
+        tqdm.tqdm.write(f"Indexed {len(self.all_files)} files and {len(self.all_folders)} folders in dataset tarball: {self.base_path}")
 
         last_modified = os.path.getmtime(self.base_path)
         index = {
@@ -49,7 +50,7 @@ class DatasetFS:
             "all_folders": self.all_folders,
             "file_map": self.file_map
         }
-        print(f"Saving index file: {index_file}")
+        tqdm.tqdm.write(f"Saving index file: {index_file}")
         with open(index_file, "wb") as f:
             pickle.dump(index, f)
 
@@ -59,13 +60,16 @@ class DatasetFS:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
         if exc_type is not None:
-            print(f"Exception occurred: {exc_value}", file=sys.stderr)
+            tqdm.tqdm.write(f"Exception occurred: {exc_value}", file=sys.stderr)
         return False
 
     def close(self):
         if self.tar:
             self.tar.close()
             self.tar = None
+
+    def __del__(self):
+        self.close()
 
     def get_all_files(self):
         return self.all_files

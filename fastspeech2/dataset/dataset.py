@@ -50,11 +50,12 @@ class DatasetWithLabelContrastive(Dataset):
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit, sort=False
     ):
         
-        dataset_fs = self.get_dataset_fs(dataset_path_config.base_dir)
         self.base_dir = dataset_path_config.base_dir
 
         self.feature_dir = dataset_path_config.feature_dir
         self.text_cleaners = dataset_preprocessing_config.text_cleaners
+
+        dataset_fs = self.get_dataset_fs()
         
         meta_file = None
         if split == DatasetSplit.TRAIN:
@@ -80,6 +81,32 @@ class DatasetWithLabelContrastive(Dataset):
         else:
             self.label_map = None
 
+
+        # For label removed cases
+        # filter out samples without labels and print a warning
+        if self.label_map:
+            num_excluded = 0
+            filtered_basename = []
+            filtered_speaker = []
+            filtered_text = []
+            filtered_raw_text = []
+            for idx in range(len(self.basename)):
+                if self.basename[idx] in self.label_map:
+                    filtered_basename.append(self.basename[idx])
+                    filtered_speaker.append(self.speaker[idx])
+                    filtered_text.append(self.text[idx])
+                    filtered_raw_text.append(self.raw_text[idx])
+                else:
+                    num_excluded += 1
+            if num_excluded > 0:
+                tqdm.tqdm.write(f"Warning: {num_excluded} samples do not have labels and will be ignored.")
+            self.basename = filtered_basename
+            self.speaker = filtered_speaker
+            self.text = filtered_text
+            self.raw_text = filtered_raw_text
+
+
+
         self.label_map_reverse: dict[int, list[int]] = {}
         if self.label_map:
             for idx in range(len(self.basename)):
@@ -88,15 +115,15 @@ class DatasetWithLabelContrastive(Dataset):
                     self.label_map_reverse[label] = []
                 self.label_map_reverse[label].append(idx)
 
-    @lru_cache(maxsize=None)
-    def get_dataset_fs(self, base_path):
-        return DatasetFS(base_path)
+    @lru_cache(maxsize=1)
+    def get_dataset_fs(self):
+        return DatasetFS(self.base_dir)
 
     def __len__(self):
         return len(self.text)
 
     def __load_data_sample(self, idx: int) -> DataSample:
-        dataset_fs = self.get_dataset_fs(self.base_dir)
+        dataset_fs = self.get_dataset_fs()
 
         basename = self.basename[idx]
         speaker = self.speaker[idx]
@@ -276,20 +303,19 @@ class DatasetWithLabelContrastive(Dataset):
         mask = mask[batch.sample_idxs]  # reorder mask according to sample_idxs
 
         return batch, mask
-    
 
 
 class DatasetWithLabel(Dataset):
     def __init__(
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit, sort=False
     ):
-        
-        dataset_fs = self.get_dataset_fs(dataset_path_config.base_dir)
         self.base_dir = dataset_path_config.base_dir
 
         self.feature_dir = dataset_path_config.feature_dir
         self.text_cleaners = dataset_preprocessing_config.text_cleaners
         
+        dataset_fs = self.get_dataset_fs()
+
         meta_file = None
         if split == DatasetSplit.TRAIN:
             meta_file = dataset_path_config.meta_file_train
@@ -314,16 +340,38 @@ class DatasetWithLabel(Dataset):
         else:
             self.label_map = None
 
+        # For label removed cases
+        if self.label_map:
+            num_excluded = 0
+            filtered_basename = []
+            filtered_speaker = []
+            filtered_text = []
+            filtered_raw_text = []
+            for idx in range(len(self.basename)):
+                if self.basename[idx] in self.label_map:
+                    filtered_basename.append(self.basename[idx])
+                    filtered_speaker.append(self.speaker[idx])
+                    filtered_text.append(self.text[idx])
+                    filtered_raw_text.append(self.raw_text[idx])
+                else:
+                    num_excluded += 1
+            if num_excluded > 0:
+                tqdm.tqdm.write(f"Warning: {num_excluded} samples do not have labels and will be ignored.")
+            self.basename = filtered_basename
+            self.speaker = filtered_speaker
+            self.text = filtered_text
+            self.raw_text = filtered_raw_text
+
         
     @lru_cache(maxsize=None)
-    def get_dataset_fs(self, base_path):
-        return DatasetFS(base_path)
+    def get_dataset_fs(self):
+        return DatasetFS(self.base_dir)
 
     def __len__(self):
         return len(self.text)
 
     def __getitem__(self, idx):
-        dataset_fs = self.get_dataset_fs(self.base_dir)
+        dataset_fs = self.get_dataset_fs()
 
         basename = self.basename[idx]
         speaker = self.speaker[idx]
@@ -425,8 +473,11 @@ class TextOnlyDatasetWithLabel(Dataset):
     def __init__(
         self, dataset_path_config: DatasetPathConfig, dataset_preprocessing_config: DatasetPreprocessingConfig, split: DatasetSplit
     ):
-        dataset_fs = self.get_dataset_fs(dataset_path_config.base_dir)
+        self.base_dir = dataset_path_config.base_dir
+
         self.text_cleaners = dataset_preprocessing_config.text_cleaners
+
+        dataset_fs = self.get_dataset_fs()
 
         meta_file = None
         if split == DatasetSplit.TRAIN:
@@ -450,6 +501,28 @@ class TextOnlyDatasetWithLabel(Dataset):
         else:
             self.label_map = None
 
+        # For label removed cases
+        if self.label_map:
+            num_excluded = 0
+            filtered_data_ids = []
+            filtered_speakers = []
+            filtered_texts = []
+            filtered_raw_texts = []
+            for idx in range(len(self.data_ids)):
+                if self.data_ids[idx] in self.label_map:
+                    filtered_data_ids.append(self.data_ids[idx])
+                    filtered_speakers.append(self.speakers[idx])
+                    filtered_texts.append(self.texts[idx])
+                    filtered_raw_texts.append(self.raw_texts[idx])
+                else:
+                    num_excluded += 1
+            if num_excluded > 0:
+                tqdm.tqdm.write(f"Warning: {num_excluded} samples do not have labels and will be ignored.")
+            self.data_ids = filtered_data_ids
+            self.speakers = filtered_speakers
+            self.texts = filtered_texts
+            self.raw_texts = filtered_raw_texts
+
     def process_meta(self, file_stream: IO[bytes]) -> tuple[list[str], list[str], list[str], list[str]]:
         with io.TextIOWrapper(file_stream, encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -465,8 +538,8 @@ class TextOnlyDatasetWithLabel(Dataset):
             return basename, speaker, text, raw_text
     
     @lru_cache(maxsize=None)
-    def get_dataset_fs(self, base_path):
-        return DatasetFS(base_path)
+    def get_dataset_fs(self):
+        return DatasetFS(self.base_dir)
 
     def __len__(self):
         return len(self.data_ids)
