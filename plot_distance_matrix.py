@@ -1,9 +1,15 @@
+import argparse
 
-# DISTANCE_FILE = "output/expresso/style/prosody_predictor_gt/gt/wasserstein_distance/val/pitch/0.csv"
-# OUTPUT_FILE = "output/expresso/style/prosody_predictor_gt/gt/vis/val/pitch/0.png"
+arg_parser = argparse.ArgumentParser()
+arg_parser.add_argument(
+    "--distance_file", type=str, help="CSV file containing Wasserstein distances e.g. output/dataset/lable/model_gt/gt/wasserstein_distance/split_anchors/feature/0.csv"
+)
+arg_parser.add_argument(
+    "--output_file", type=str, help="Path to save the distance matrix plot e.g. output/dataset/label/model_gt/gt/vis/split_anchors/feature/0.png"
+)
+args = arg_parser.parse_args()
 
-DISTANCE_FILE = "output/expresso/style/prosody_predictor_gt/gt/wasserstein_distance_no_whisper/val/pitch/0.csv"
-OUTPUT_FILE = "output/expresso/style/prosody_predictor_gt/gt/vis_no_whisper/val/pitch/0.png"
+
 
 LABLE_PREFERED_ORDER = [
     "default",
@@ -12,7 +18,12 @@ LABLE_PREFERED_ORDER = [
     "sad",
     "happy",
     "laughing",
-    "whisper"
+    "whisper",
+
+
+    "negative",
+    "neutral",
+    "positive",
 ]
 
 import os
@@ -24,7 +35,7 @@ import tqdm
 # plot the matrix
 lables_set = set()
 plt.figure(figsize=(8, 8))
-with open(DISTANCE_FILE, 'r', newline='') as csvfile:
+with open(args.distance_file, 'r', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         lables_set.add(row['source_label'])
@@ -46,7 +57,7 @@ lable_idx_map = {label: idx for idx, label in enumerate(labels)}
 
 distance_matrix = np.zeros((len(labels), len(labels)))
 
-with open(DISTANCE_FILE, 'r', newline='') as csvfile:
+with open(args.distance_file, 'r', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
 
@@ -73,7 +84,7 @@ plt.yticks(ticks=np.arange(len(labels)), labels=labels)
 plt.title('Wasserstein Distance Matrix')
 plt.tight_layout()
 
-os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
 
-plt.savefig(OUTPUT_FILE)
-print(f"Saved distance matrix plot to {OUTPUT_FILE}")
+plt.savefig(args.output_file)
+print(f"Saved distance matrix plot to {args.output_file}")

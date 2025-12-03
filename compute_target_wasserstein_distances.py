@@ -1,52 +1,30 @@
+import argparse
 import csv
 import os
 import numpy as np
 import scipy.stats
 import tqdm
 
-DATA_LABEL_META = "data/expresso_style.csv"
-ANCHOR_FILE = "output/expresso/style/prosody_predictor_gt/gt/pred/val/0.csv"
+arg_parser = argparse.ArgumentParser()
+arg_parser.add_argument(
+    "--data_label_meta", type=str, help="CSV file containing data label meta information. e.g. data/dataset_label.csv"
+)
+arg_parser.add_argument(
+    "--anchor_file", type=str, help="CSV file containing anchor data. e.g. output/dataset/label/model_gt/gt/pred/split/gt/0.csv"
+)
+arg_parser.add_argument(
+    "--pred_dir", type=str, help="Directory containing prediction CSV files. e.g. output/dataset/label/model/variant/loss/pred/split"
+)
+arg_parser.add_argument(
+    "--output_dir", type=str, help="Directory to save Wasserstein distance CSV files. e.g. output/dataset/label/model/variant/loss/wasserstein_distance/split"
+)
+args = arg_parser.parse_args()
 
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/default/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/default/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1_0.1/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1_0.1/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1_0.1/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1_0.1/wasserstein_distance/val"
-
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1/wasserstein_distance/val"
-PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/pred/val"
-OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/wasserstein_distance/val"
-
-
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/default/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/default/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1_no_whisper/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1_no_whisper/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1_no_whisper/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1_no_whisper/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1_0.1_no_whisper/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive6_0.1_0.1_no_whisper/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1_0.1_no_whisper/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/contrastive5_0.1_0.1_no_whisper/wasserstein_distance/val"
-# PRED_DIR = "output/expresso/style/prosody_predictor/embedding_input/default_no_whisper/pred/val"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor/embedding_input/default_no_whisper/wasserstein_distance/val"
-
-
-
-
-# PRED_DIR = "output/expresso/style/prosody_predictor_gt/gt/pred/train"
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor_gt/gt/wasserstein_distance/train"
 
 
 def get_source_label_map():
     source_label_map = {}
-    with open(DATA_LABEL_META, 'r', newline='') as csvfile:
+    with open(args.data_label_meta, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         assert reader.fieldnames is not None, "CSV file must have header"
         label_names = reader.fieldnames[1:]
@@ -72,7 +50,7 @@ source_label_map, label_names = get_source_label_map()
 def get_anchor_data(feature_name, label_col, label_names):
     anchor_data_map = {}
 
-    with open(ANCHOR_FILE, 'r', newline='') as csvfile:
+    with open(args.anchor_file, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             label = int(row[label_col])
@@ -102,8 +80,8 @@ anchor_data_map = {
 
 def get_ckpt_file_map():
     ckpt_file_map = {}
-    for target_label in os.listdir(PRED_DIR):
-        for pred_file in os.listdir(os.path.join(PRED_DIR, target_label)):
+    for target_label in os.listdir(args.pred_dir):
+        for pred_file in os.listdir(os.path.join(args.pred_dir, target_label)):
             ckpt_id = pred_file.replace(".csv", "")
             if ckpt_id not in ckpt_file_map:
                 ckpt_file_map[ckpt_id] = {}
@@ -115,7 +93,7 @@ ckpt_file_map = get_ckpt_file_map()
 
 # loop over features
 for feature in ["pitch", "energy", "duration"]:
-    output_feature_dir = os.path.join(OUTPUT_DIR, feature)
+    output_feature_dir = os.path.join(args.output_dir, feature)
     os.makedirs(output_feature_dir, exist_ok=True)
 
     # loop over ckpts
@@ -132,7 +110,7 @@ for feature in ["pitch", "energy", "duration"]:
                 target_label = target_label_str
                 pred_data_source_map = {}
         
-                pred_file_path = os.path.join(PRED_DIR, target_label_str, pred_file)
+                pred_file_path = os.path.join(args.pred_dir, target_label_str, pred_file)
 
                 with open(pred_file_path, 'r', newline='') as pred_csvfile:
                     reader = csv.DictReader(pred_csvfile)

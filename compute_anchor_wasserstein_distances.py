@@ -1,25 +1,32 @@
+import argparse
 import csv
 import os
 import numpy as np
 import scipy.stats
 import tqdm
 
-# DATA_LABEL_META = "data/expresso_style.csv"
-# ANCHOR_FILE = "output/expresso/style/prosody_predictor_gt/gt/pred/pred_val.csv"
-# # OUTPUT_DIR = "output/expresso/style/prosody_predictor_gt/gt/wasserstein_distance/val"
 
-# EXCLUDE_LABELS = ["whisper"]
-# OUTPUT_DIR = "output/expresso/style/prosody_predictor_gt/gt/wasserstein_distance_no_whisper/val"
+arg_parser = argparse.ArgumentParser()
+arg_parser.add_argument(
+    "--data_label_meta", type=str, help="CSV file containing data label meta information. e.g. data/dataset_label.csv"
+)
+arg_parser.add_argument(
+    "--anchor_file", type=str, help="CSV file containing anchor data. e.g. output/dataset/label/model_gt/gt/pred/split/0.csv"
+)
+arg_parser.add_argument(
+    "--output_dir", type=str, help="Directory to save Wasserstein distance CSV files. e.g. output/dataset/label/model_gt/gt/wasserstein_distance/split"
+)
+arg_parser.add_argument(
+    "--exclude_labels", type=str, default=None, help="Labels to exclude. Comma separated list e.g. category1,category2"
+)
+args = arg_parser.parse_args()
 
-DATA_LABEL_META = "data/expresso_style.csv"
-ANCHOR_FILE = "output/expresso/style/prosody_predictor_gt/gt/pred/train/gt/0.csv"
-OUTPUT_DIR = "output/expresso/style/prosody_predictor_gt/gt/wasserstein_distance/train"
+exclude_labels = args.exclude_labels.split(',') if args.exclude_labels is not None else []
 
-EXCLUDE_LABELS = []
 
 def get_source_label_map():
     source_label_map = {}
-    with open(DATA_LABEL_META, 'r', newline='') as csvfile:
+    with open(args.data_label_meta, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         assert reader.fieldnames is not None, "CSV file must have header"
         label_names = reader.fieldnames[1:]
@@ -45,7 +52,7 @@ source_label_map, label_names = get_source_label_map()
 def get_anchor_data(feature_name, label_col, label_names):
     anchor_data_map = {}
 
-    with open(ANCHOR_FILE, 'r', newline='') as csvfile:
+    with open(args.anchor_file, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             label = int(row[label_col])
@@ -64,7 +71,7 @@ duration_anchor_data = get_anchor_data("duration", "label", label_names)
 labels = sorted(pitch_anchor_data.keys())
 assert labels == sorted(energy_anchor_data.keys()) == sorted(duration_anchor_data.keys()), "Labels do not match across features."
 
-labels = [label for label in labels if label not in EXCLUDE_LABELS]
+labels = [label for label in labels if label not in exclude_labels]
 
 # feature_name -> label -> data list
 anchor_data_map = {
@@ -76,7 +83,7 @@ anchor_data_map = {
 
 # loop over features
 for feature in ["pitch", "energy", "duration"]:
-    output_feature_dir = os.path.join(OUTPUT_DIR, feature)
+    output_feature_dir = os.path.join(args.output_dir, feature)
     os.makedirs(output_feature_dir, exist_ok=True)
 
     output_file = os.path.join(output_feature_dir, f"0.csv")
