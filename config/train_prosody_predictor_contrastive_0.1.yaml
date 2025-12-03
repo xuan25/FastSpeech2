@@ -20,5 +20,5 @@ step:
   val_step: 1000
   save_step: 1000
 loss:
-  lambda_neg: 0.1
   lambda_pos: 0.1
+  lambda_neg: 0.1
