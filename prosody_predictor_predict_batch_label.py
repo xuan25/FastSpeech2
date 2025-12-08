@@ -16,7 +16,7 @@ if __name__ == "__main__":
         description="Predict prosody features using a trained prosody predictor model."
     )
     arg_parser.add_argument(
-        "--model_ckpt_dir", type=str, required=True, help="Model checkpoint directory. e.g. dataset/label/model/variant/loss"
+        "--model_ckpt_dir", type=str, required=True, help="Model checkpoint directory. e.g. output/dataset/label/model/variant/loss"
     )
     arg_parser.add_argument(
         "--dataset_config_path", type=str, required=True, help="Dataset configuration file path. e.g. config/dataset.yaml"
@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
     configs = [
         {
-            "ckpt_path": f"output/{args.model_ckpt_dir}/ckpt/{model_ckpt_num}.pth",
-            "output_path": f"output/{args.model_ckpt_dir}/pred/{args.data_split_name}/{label_name}/{model_ckpt_num}.csv",
+            "ckpt_path": f"{args.model_ckpt_dir}/ckpt/{model_ckpt_num}.pth",
+            "output_path": f"{args.model_ckpt_dir}/pred/{args.data_split_name}/{label_name}/{model_ckpt_num}.csv",
             "dataset_config_path":args.dataset_config_path,
             "model_config_path": args.model_config_path,
             "data_split_name": args.data_split_name,

@@ -87,7 +87,7 @@ def main():
     # energies_pos = []
     # durations_pos = []
 
-    with open(os.path.join(output_dir, f"pred_{data_split_str}.csv"), "w", encoding="utf-8", newline="") as f:
+    with open(os.path.join(output_dir, f"0.csv"), "w", encoding="utf-8", newline="") as f:
         csv_writer = csv.writer(f)
         csv_writer.writerow(["data_id", "phone_idx", "phone", "pitch", "energy", "duration", "label"])
 

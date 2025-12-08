@@ -14,7 +14,7 @@ arg_parser.add_argument(
     "--anchor_file", type=str, help="CSV file containing anchor data. e.g. output/dataset/label/model_gt/gt/pred/split/0.csv"
 )
 arg_parser.add_argument(
-    "--output_dir", type=str, help="Directory to save Wasserstein distance CSV files. e.g. output/dataset/label/model_gt/gt/wasserstein_distance/split"
+    "--output_dir", type=str, help="Directory to save Wasserstein distance CSV files. e.g. output/dataset/label/model_gt/gt/wasserstein_distance/split_anchors"
 )
 arg_parser.add_argument(
     "--exclude_labels", type=str, default=None, help="Labels to exclude. Comma separated list e.g. category1,category2"

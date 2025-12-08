@@ -47,6 +47,18 @@ SOURCE_TARGETS = [
     (("laughing", "gt"), "#8E44AD"),            # dark purple
     (("sad", "gt"), "#92A016"),                 # dark teal
     (("whisper", "gt"), "#AD1457"),             # dark pink
+
+    (("anger", "default"), "#E74C3C"),            # bright red
+    (("disgust", "default"), "#3498DB"),             # bright blue
+    (("fear", "default"), "#2ECC71"),          # bright green
+    (("joy", "default"), "#F39C12"),               # bright orange
+    (("neutral", "default"), "#9B59B6"),            # bright purple
+    (("sadness", "default"), "#9EBC1A"),                 # bright teal
+    (("surprise", "default"), "#E91E63"),             # bright pink
+
+    (("neutral", "default"), "#9B59B6"),            # bright purple
+    (("positive", "default"), "#9EBC1A"),                 # bright teal
+    (("negative", "default"), "#E91E63"),             # bright pink
 ]
 
 ANCHOR_ZOOM = 1
