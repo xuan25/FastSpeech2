@@ -142,5 +142,5 @@ for feature in ["pitch", "energy", "duration"]:
                             'anchor_label': anchor_label,
                             'wasserstein_distance': wass_distance
                         })
-        print(f"Wrote Wasserstein distances to {output_file}")
+        tqdm.tqdm.write(f"Wrote Wasserstein distances to {output_file}")
 
