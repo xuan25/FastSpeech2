@@ -6,6 +6,7 @@ pyyaml
 Unidecode
 inflect
 matplotlib
+scikit_learn==1.7.2
 scipy
 g2p_en
 adjustText
