@@ -25,11 +25,18 @@ import numpy as np
 #     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_1_1/wasserstein_distance/train/pitch/1000.csv",
 # ]
 
+# FILES = [
+#     "output/expresso/style/prosody_predictor/embedding_input/default/wasserstein_distance/train/pitch/41000.csv",
+#     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/wasserstein_distance/train/pitch/41000.csv",
+#     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_1/wasserstein_distance/train/pitch/41000.csv",
+#     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_1_1/wasserstein_distance/train/pitch/41000.csv",
+# ]
+
 FILES = [
-    "output/expresso/style/prosody_predictor/embedding_input/default/wasserstein_distance/train/pitch/41000.csv",
-    "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/wasserstein_distance/train/pitch/41000.csv",
-    "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_1/wasserstein_distance/train/pitch/41000.csv",
-    "output/expresso/style/prosody_predictor/embedding_input/contrastive7_1_1/wasserstein_distance/train/pitch/41000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/default/wasserstein_distance/train/pitch/41000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_0.1/wasserstein_distance/train/pitch/41000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_1/wasserstein_distance/train/pitch/41000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_1_1/wasserstein_distance/train/pitch/41000.csv",
 ]
 
 

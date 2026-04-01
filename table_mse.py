@@ -11,12 +11,12 @@ import numpy as np
 #     "output/meld/emotion/prosody_predictor/embedding_input/contrastive7_1_1/mse/train/pitch/361000.csv",   
 # ]
 
-FILES = [
-    "output/expresso/style/prosody_predictor/embedding_input/default/mse/train/pitch/361000.csv",
-    "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/mse/train/pitch/361000.csv",
-    "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_1/mse/train/pitch/361000.csv",
-    "output/expresso/style/prosody_predictor/embedding_input/contrastive7_1_1/mse/train/pitch/361000.csv",   
-]
+# FILES = [
+#     "output/expresso/style/prosody_predictor/embedding_input/default/mse/train/pitch/361000.csv",
+#     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/mse/train/pitch/361000.csv",
+#     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_1/mse/train/pitch/361000.csv",
+#     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_1_1/mse/train/pitch/361000.csv",   
+# ]
 
 # FILES = [
 #     "output/expresso/style/prosody_predictor/embedding_input/default/mse/train/pitch/1000.csv",
@@ -31,6 +31,14 @@ FILES = [
 #     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_1/mse/train/pitch/41000.csv",
 #     "output/expresso/style/prosody_predictor/embedding_input/contrastive7_1_1/mse/train/pitch/41000.csv",
 # ]
+
+
+FILES = [
+    "output/libritts/sentiment/prosody_predictor/embedding_input/default/mse/train/pitch/361000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_0.1/mse/train/pitch/361000.csv", 
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_1/mse/train/pitch/361000.csv", 
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_1_1/mse/train/pitch/361000.csv", 
+]
 
 
 
