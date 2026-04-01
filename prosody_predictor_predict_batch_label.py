@@ -39,6 +39,9 @@ if __name__ == "__main__":
     arg_parser.add_argument(
         "--ckpt_step", type=int, default=40000, help="Step size between checkpoints to process. e.g. 40000"
     )
+    arg_parser.add_argument(
+        "--skip_conf_steps", type=int, default=0, help="Number of initial configurations to skip. Useful for resuming after a failure. e.g. 0"
+    )
     args = arg_parser.parse_args()
 
 
@@ -64,10 +67,14 @@ if __name__ == "__main__":
         ] + [(i, label_names[i]) for i in range(len(label_names))]
     ]
 
-
+    left_to_skip = args.skip_conf_steps
 
     success_count = 0
-    for config in tqdm.tqdm(configs, desc="Processing configurations", dynamic_ncols=True, leave=False):
+    for config in tqdm.tqdm(configs, desc="Processing configurations", dynamic_ncols=True, leave=False, miniters=1, mininterval=0):
+        if left_to_skip > 0:
+            left_to_skip -= 1
+            tqdm.tqdm.write(f"Skipping configuration")
+            continue
         try:
             process(**config)
             success_count += 1
