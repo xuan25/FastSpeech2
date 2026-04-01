@@ -1,11 +1,11 @@
 path:
-  base_dir: "../data/LibriTTS.tar"
+  base_dir: "../data/libritts.tar"
   meta_file_train: "train.csv"
-  meta_file_val: "val.csv"
+  meta_file_val: "dev.csv"
   speaker_map_file: "speakers.json"
   feature_dir: ""
   stats_file: "stats.json"
-  label_file: "sentiment_scores.csv"
+  label_file: "../libritts_sentiment.csv"
 
 properties:
   pitch_feature_level: "phoneme_level" # support 'phoneme_level' or 'frame_level'
