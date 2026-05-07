@@ -13,7 +13,7 @@ from .dataset.datasetfs import DatasetFS
 from .config import DatasetConfig, DatasetFeaturePropertiesConfig, ModelConfig, TrainConfig, TrainOptimizerConfig
 from .dataset.data_models import DataBatch, DataBatchTorch, DatasetFeatureStats
 from .model.prosody_predictor import ProsodyPredictor, ProsodyPredictorOutput
-from .model.loss import ProsodyPredictorContrastiveLossResult
+from .model.loss import ProsodyPredictorContrastiveLossResult, ProsodyPredictorEmbeddingContrastiveLoss
 from .model.optimizer import ScheduledOptim
 from .utils.model import get_param_num
 from .utils.tools import log_prosody_predictor_contrastive
@@ -152,11 +152,23 @@ def main():
     )
     model = nn.DataParallel(model_raw)
     num_param = get_param_num(model)
-    loss_func: ProsodyPredictorContrastiveLoss = ProsodyPredictorContrastiveLoss(
-        dataset_config.feature_properties_config,
-        lambda_neg=train_config.loss_config.lambda_neg,
-        lambda_pos=train_config.loss_config.lambda_pos,
-    ).to(device)
+    if train_config.loss_config.loss_space == "embedding":
+        print("Using embedding space for contrastive loss.")
+        loss_func: ProsodyPredictorContrastiveLoss | ProsodyPredictorEmbeddingContrastiveLoss = ProsodyPredictorContrastiveLoss(
+            dataset_config.feature_properties_config,
+            lambda_neg=train_config.loss_config.lambda_neg,
+            lambda_pos=train_config.loss_config.lambda_pos,
+        ).to(device)
+    elif train_config.loss_config.loss_space == "scalar":
+        print("Using scalar space for contrastive loss.")
+        loss_func: ProsodyPredictorContrastiveLoss | ProsodyPredictorEmbeddingContrastiveLoss = ProsodyPredictorEmbeddingContrastiveLoss(
+            dataset_config.feature_properties_config,
+            lambda_neg=train_config.loss_config.lambda_neg,
+            lambda_pos=train_config.loss_config.lambda_pos,
+        ).to(device)
+    else:
+        raise ValueError(f"Invalid loss space: {train_config.loss_config.loss_space}")
+    
     print("Number of Prosody Predictor Parameters:", num_param)
 
     # Init logger

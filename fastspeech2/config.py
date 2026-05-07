@@ -690,15 +690,18 @@ class LossConfig:
     def __init__(
         self,
         lambda_neg: float,
-        lambda_pos: float
+        lambda_pos: float,
+        loss_space: str
     ):
         self.lambda_neg = lambda_neg
         self.lambda_pos = lambda_pos
+        self.loss_space = loss_space
     def __repr__(self):
         return (
             "LossConfig( \n"
             f"    lambda_neg={self.lambda_neg}, \n"
-            f"    lambda_pos={self.lambda_pos})"
+            f"    lambda_pos={self.lambda_pos}, \n"
+            f"    loss_space={self.loss_space})"
         )
 
     def __eq__(self, other):
@@ -712,14 +715,16 @@ class LossConfig:
     def to_dict(self):
         return {
             "lambda_neg": self.lambda_neg,
-            "lambda_pos": self.lambda_pos
+            "lambda_pos": self.lambda_pos,
+            "loss_space": self.loss_space
         }
     
     @classmethod
     def from_dict(cls, config_dict: dict):
         return cls(
             lambda_neg=config_dict['lambda_neg'],
-            lambda_pos=config_dict['lambda_pos']
+            lambda_pos=config_dict['lambda_pos'],
+            loss_space=config_dict['loss_space']
         )
     
 class TrainConfig:
