@@ -33,10 +33,12 @@ import numpy as np
 # ]
 
 FILES = [
-    "output/libritts/sentiment/prosody_predictor/embedding_input/default/wasserstein_distance/train/pitch/41000.csv",
-    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_0.1/wasserstein_distance/train/pitch/41000.csv",
-    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_1/wasserstein_distance/train/pitch/41000.csv",
-    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_1_1/wasserstein_distance/train/pitch/41000.csv",
+    # "output/libritts/sentiment/prosody_predictor/embedding_input/default/wasserstein_distance/train/pitch/41000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/archive-lr-0.01/default_old-lr-0.1/wasserstein_distance/train/pitch/41000.csv",
+    # "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_0.1/wasserstein_distance/train/pitch/41000.csv",
+    "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive_emb_0.1_0.1/wasserstein_distance/train/pitch/41000.csv",
+    # "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_0.1_1/wasserstein_distance/train/pitch/41000.csv",
+    # "output/libritts/sentiment/prosody_predictor/embedding_input/contrastive7_1_1/wasserstein_distance/train/pitch/41000.csv",
 ]
 
 
