@@ -11,16 +11,18 @@ arg_parser.add_argument(
     default="data/expresso_style.csv"
 )
 arg_parser.add_argument(
-    "--gt_file", type=str, help="CSV file containing ground truth data. e.g. output/dataset/label/model_gt/gt/pred/split/gt/0.csv",
-    default="output/expresso/style/prosody_predictor_gt/gt/pred/train/gt/0.csv"
+    "--gt_file", type=str, help="CSV file containing ground truth data. e.g. output/dataset/label/model_gt/gt/pred/split/0.csv",
+    default="output/expresso/style/prosody_predictor_gt/gt/pred/train/0.csv"
 )
 arg_parser.add_argument(
     "--pred_dir", type=str, help="Directory containing prediction CSV files. e.g. output/dataset/label/model/variant/loss/pred/split",
-    default="output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/pred/train"
+    # default="output/expresso/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/pred/train"
+    default="output/expresso/style/prosody_predictor/default/default/pred_teacher_forcing/train"
 )
 arg_parser.add_argument(
     "--output_dir", type=str, help="Directory to save Wasserstein distance CSV files. e.g. output/dataset/label/model/variant/loss/mse/split",
-    default="output/debug/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/mse/train"
+    # default="output/debug/style/prosody_predictor/embedding_input/contrastive7_0.1_0.1/mse/train"
+    default="output/expresso/style/prosody_predictor/default/default/mse_teacher_forcing/train"
 )
 args = arg_parser.parse_args()
 
@@ -50,43 +52,6 @@ def get_source_label_map():
     return source_label_map, label_names
 
 source_label_map, label_names = get_source_label_map()
-
-
-
-# def get_anchor_data(feature_name, label_col, label_names):
-#     anchor_data_map = {}
-
-#     with open(args.anchor_file, 'r', newline='') as csvfile:
-#         reader = csv.DictReader(csvfile)
-#         for row in reader:
-#             label = int(row[label_col])
-#             label_name = label_names[label]
-#             feature_value = float(row[feature_name])
-#             if label_name not in anchor_data_map:
-#                 anchor_data_map[label_name] = []
-#             anchor_data_map[label_name].append(feature_value)
-
-#     return anchor_data_map
-
-# pitch_anchor_data = get_anchor_data("pitch", "label", label_names)
-# energy_anchor_data = get_anchor_data("energy", "label", label_names)
-# duration_anchor_data = get_anchor_data("duration", "label", label_names)
-
-
-
-
-
-# labels = sorted(pitch_anchor_data.keys())
-# assert labels == sorted(energy_anchor_data.keys()) == sorted(duration_anchor_data.keys()), "Labels do not match across features."
-
-# feature_name -> label -> data list
-# anchor_data_map = {
-#     "pitch": pitch_anchor_data,
-#     "energy": energy_anchor_data,
-#     "duration": duration_anchor_data
-# }
-
-
 
 
 def get_gt_data_map(feature_name, data_id_col, pos_col):
@@ -142,7 +107,7 @@ for feature in ["pitch", "energy", "duration"]:
 
         # output a csv file for each ckpt
         with open(output_file, 'w', newline='') as csvfile:
-            fieldnames = ['source_label', 'target_label', 'mse']
+            fieldnames = ['source_label', 'target_label', 'mse', 'mae']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
@@ -190,11 +155,14 @@ for feature in ["pitch", "energy", "duration"]:
                     import numpy as np
                     mse = np.mean(se)
 
+                    mae = np.mean(np.abs(np.array(pred_data) - np.array(gt_data)))
+
                     writer.writerow({
                         'source_label': source_label,
                         'target_label': target_label,
-                        'mse': mse
+                        'mse': mse,
+                        'mae': mae
                     })
 
-        tqdm.tqdm.write(f"Wrote MSE values to {output_file}")
+        tqdm.tqdm.write(f"Wrote MSE and MAE values to {output_file}")
 
