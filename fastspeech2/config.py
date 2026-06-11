@@ -7,6 +7,7 @@ class DatasetPathConfig:
         base_dir: str,
         meta_file_train: str,
         meta_file_val: str,
+        meta_file_test: str,
         speaker_map_file: str,
         feature_dir: str,
         stats_file: str,
@@ -15,6 +16,7 @@ class DatasetPathConfig:
         self.base_dir = base_dir
         self.meta_file_train = meta_file_train
         self.meta_file_val = meta_file_val
+        self.meta_file_test = meta_file_test
         self.speaker_map_file = speaker_map_file
         self.feature_dir = feature_dir
         self.stats_file = stats_file
@@ -27,6 +29,7 @@ class DatasetPathConfig:
             f"    base_dir={self.base_dir}, \n"
             f"    meta_file_train={self.meta_file_train}, \n"
             f"    meta_file_val={self.meta_file_val}, \n"
+            f"    meta_file_test={self.meta_file_test}, \n"
             f"    speaker_map_file={self.speaker_map_file}, \n"
             f"    feature_dir={self.feature_dir}, \n"
             f"    stats_file={self.stats_file}, \n"
@@ -47,6 +50,7 @@ class DatasetPathConfig:
             "base_dir": self.base_dir,
             "meta_file_train": self.meta_file_train,
             "meta_file_val": self.meta_file_val,
+            "meta_file_test": self.meta_file_test,
             "speaker_map_file": self.speaker_map_file,
             "feature_dir": self.feature_dir,
             "stats_file": self.stats_file,
@@ -59,6 +63,7 @@ class DatasetPathConfig:
             base_dir=os.path.join(base_dir, config_dict['base_dir']),
             meta_file_train=config_dict['meta_file_train'],
             meta_file_val=config_dict['meta_file_val'],
+            meta_file_test=config_dict['meta_file_test'],
             speaker_map_file=config_dict['speaker_map_file'],
             feature_dir=config_dict['feature_dir'],
             stats_file=config_dict['stats_file'],

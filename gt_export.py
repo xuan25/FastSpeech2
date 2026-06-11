@@ -35,7 +35,7 @@ def main():
         "--data_split",
         type=str,
         default="val",
-        choices=["train", "val"],
+        choices=["train", "val", "test"],
         help="data split to use for synthesis",
     )
     parser.add_argument(

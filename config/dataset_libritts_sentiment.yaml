@@ -2,6 +2,7 @@ path:
   base_dir: "../data/libritts.tar"
   meta_file_train: "train.csv"
   meta_file_val: "dev.csv"
+  meta_file_test: "test.csv"
   speaker_map_file: "speakers.json"
   feature_dir: ""
   stats_file: "stats.json"

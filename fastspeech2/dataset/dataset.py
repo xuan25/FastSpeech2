@@ -62,6 +62,8 @@ class DatasetWithLabelContrastive(Dataset):
             meta_file = dataset_path_config.meta_file_train
         elif split == DatasetSplit.VAL:
             meta_file = dataset_path_config.meta_file_val
+        elif split == DatasetSplit.TEST:
+            meta_file = dataset_path_config.meta_file_test
         else:
             raise ValueError(f"Unknown split: {split}")
         
@@ -321,6 +323,8 @@ class DatasetWithLabel(Dataset):
             meta_file = dataset_path_config.meta_file_train
         elif split == DatasetSplit.VAL:
             meta_file = dataset_path_config.meta_file_val
+        elif split == DatasetSplit.TEST:
+            meta_file = dataset_path_config.meta_file_test
         else:
             raise ValueError(f"Unknown split: {split}")
         
@@ -484,6 +488,8 @@ class TextOnlyDatasetWithLabel(Dataset):
             meta_file = dataset_path_config.meta_file_train
         elif split == DatasetSplit.VAL:
             meta_file = dataset_path_config.meta_file_val
+        elif split == DatasetSplit.TEST:
+            meta_file = dataset_path_config.meta_file_test
         else:
             raise ValueError(f"Unknown split: {split}")
 
