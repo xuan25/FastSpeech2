@@ -2,6 +2,7 @@
 ## E.g. setup
 ```sh
 # export DATASET=expresso
+# export ASPECT=style
 export DATASET=libritts
 export ASPECT=sentiment
 
@@ -14,11 +15,15 @@ export ASPECT=sentiment
 # export TRAIN_CONFIG=train_prosody_predictor_contrastive_0.1_1
 # export MODEL_CONFIG=contrastive7_0.1_1
 
-export TRAIN_CONFIG=train_prosody_predictor_contrastive_1_1
-export MODEL_CONFIG=contrastive7_1_1
+# export TRAIN_CONFIG=train_prosody_predictor_contrastive_1_1
+# export MODEL_CONFIG=contrastive7_1_1
+
+export TRAIN_CONFIG=train_prosody_predictor_contrastive_0.1_0.1
+export MODEL_CONFIG=contrastive_emb_0.1_0.1
 
 export DATA_SPLIT=train
-export FACTOR=energy
+# export DATA_SPLIT=test
+export FACTOR=pitch
 ```
 
 ## For each dataset
@@ -27,8 +32,8 @@ export FACTOR=energy
 ```sh
 python gt_export.py \
 --dataset_config config/dataset_$DATASET\_$ASPECT.yaml \
---data_split train \
---output_dir output/$DATASET/$ASPECT/prosody_predictor_gt/gt/pred/train
+--data_split $DATA_SPLIT \
+--output_dir output/$DATASET/$ASPECT/prosody_predictor_gt/gt/pred/$DATA_SPLIT
 ```
 
 2. Compute the Wasserstein distance between the anchor prosody features and store the distances in a CSV file.
@@ -45,6 +50,60 @@ python compute_anchor_loc_pca.py \
 --data_label_meta data/$DATASET\_$ASPECT.csv \
 --anchor_file output/$DATASET/$ASPECT/prosody_predictor_gt/gt/pred/train/0.csv \
 --output_dir output/$DATASET/$ASPECT/prosody_predictor_gt/gt/loc_anchor_train
+```
+
+## For baseline
+
+1. Train the prosody predictor without contrastive learning.
+```sh
+python train_prosody_predictor.py \
+--dataset_config config/dataset_$DATASET\_$ASPECT.yaml \
+--train_config config/$TRAIN_CONFIG.yaml \
+--model_config config/model.yaml \
+--output_dir output/$DATASET/$ASPECT/prosody_predictor/default/$MODEL_CONFIG
+```
+
+2. Predict the prosody features with the trained model.
+<!-- ```sh
+python prosody_predictor_predict_batch_label.py \
+--model_ckpt_dir output/$DATASET/$ASPECT/prosody_predictor/default/$MODEL_CONFIG \
+--dataset_config_path config/dataset_$DATASET\_$ASPECT.yaml \
+--model_config_path config/model.yaml \
+--label_index_file data/$DATASET\_$ASPECT.csv \
+--data_split_name $DATA_SPLIT \
+--ckpt_begin 1000 \
+--ckpt_end 400000 \
+--ckpt_step 40000 \
+--skip_conf_steps 0
+``` -->
+
+```sh
+python prosody_predictor_predict_batch_label_teacher_forcing.py \
+--model_ckpt_dir output/$DATASET/$ASPECT/prosody_predictor/default/$MODEL_CONFIG \
+--dataset_config_path config/dataset_$DATASET\_$ASPECT.yaml \
+--model_config_path config/model.yaml \
+--label_index_file data/$DATASET\_$ASPECT.csv \
+--data_split_name $DATA_SPLIT \
+--ckpt_begin 1000 \
+--ckpt_end 400000 \
+--ckpt_step 40000 \
+--skip_conf_steps 0
+```
+
+## for each model (prediction) but teacher forcing
+
+2. Predict the prosody features with the trained model, but with teacher forcing.
+```sh
+python prosody_predictor_predict_batch_label_teacher_forcing.py \
+--model_ckpt_dir output/$DATASET/$ASPECT/prosody_predictor/embedding_input/$MODEL_CONFIG \
+--dataset_config_path config/dataset_$DATASET\_$ASPECT.yaml \
+--model_config_path config/model_label_input.yaml \
+--label_index_file data/$DATASET\_$ASPECT.csv \
+--data_split_name $DATA_SPLIT \
+--ckpt_begin 1000 \
+--ckpt_end 400000 \
+--ckpt_step 40000 \
+--skip_conf_steps 0
 ```
 
 ## For each model
