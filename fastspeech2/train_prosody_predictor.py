@@ -82,6 +82,8 @@ def main():
     )
     args = parser.parse_args()
 
+    tqdm.write("Starting training...")
+
     restore_ckpt = args.restore_ckpt
     dataset_config = DatasetConfig.load_from_yaml(args.dataset_config)
     model_config = ModelConfig.load_from_yaml(args.model_config)
@@ -180,7 +182,7 @@ def main():
 
     while True:
         epoch_bar = tqdm(total=len(loader), desc="Epoch {}".format(epoch), position=1, dynamic_ncols=True)
-        total_step_bar.n = 1
+        epoch_bar.n = 1
         for batch in loader:
 
             batch: DataBatch = batch
@@ -262,7 +264,9 @@ def main():
                 )
 
             if step == total_step:
-                quit()
+                tqdm.write("Training completed.")
+                return
+
             step += 1
             total_step_bar.update(1)
 
